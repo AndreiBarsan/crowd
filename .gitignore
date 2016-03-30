@@ -68,5 +68,7 @@ output
 *.fls
 *.out
 .ipynb_checkpoints
+
+# Generic project-specific dumps
 data/
 out/
