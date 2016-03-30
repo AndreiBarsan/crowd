@@ -22,8 +22,10 @@ a paywall or at least a bureaucracy-wall.
 
 ## Project Structure
 
+```
 /
 /notebooks         Contains exploratory Jupyter notebooks.
+```
 
 
 ## Roadmap
