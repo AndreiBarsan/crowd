@@ -1,4 +1,4 @@
-"""Data holder classes for the project."""
+"""Data holder classes and utility functions for the project."""
 
 import io
 
@@ -32,6 +32,16 @@ class JudgementRecord(object):
         """Whether this judgement is valid and can be used for aggregation."""
         return self.label_type == 0 and (self.is_relevant is not None)
 
+    def __repr__(self):
+        # TODO(andrei) Solve code duplication.
+        if self.is_relevant is None:
+            relevance = "n/A"
+        elif self.is_relevant:
+            relevance = "Relevant"
+        else:
+            relevance = "Not relevant"
+        return "%s:%s:%s" % (self.topic_id, self.doc_id, relevance)
+
 
 class WorkerLabel(object):
     def __init__(self, table_row):
@@ -61,6 +71,7 @@ class ExpertLabel(object):
 
         self.topic_id = topic_id
         self.document_id = document_id
+        # TODO(andrei) Does '-1' just mean 'missing'?
         # 0 (non-relevant), 1 (relevant) or 2 (highly relevant)
         self.label = int(label)
 
@@ -74,6 +85,9 @@ class ExpertLabel(object):
 def read_judgement_labels(file_name):
     with io.open(file_name, 'r') as f:
         return [JudgementRecord(line[:-1]) for line in f]
+
+def read_useful_judgement_labels(file_name):
+    return [l for l in read_judgement_labels(file_name) if l.is_useful()]
 
 def read_expert_labels(file_name, header=False, sep=None):
     with io.open(file_name, 'r') as f:
