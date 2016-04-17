@@ -30,7 +30,6 @@ a paywall or at least a bureaucracy-wall.
 
 ## Roadmap
 
- * Tool for building, saving, and loading document graphs.
  * Recreate existing vote propagation methods using graph (NN,
    Merge-Enough-Votes, etc.).
  * Improve existing methods using more advanced techniques, such as adaptive
