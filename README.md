@@ -24,8 +24,15 @@ a paywall or at least a bureaucracy-wall.
 
 ```
 /
-/notebooks         Contains exploratory Jupyter notebooks.
+/notebooks        Contains exploratory Jupyter notebooks.
+/crowd            Contains the main project code, such as the graph generation
+                  algorithms, the data classes, and the experiments.
 ```
+
+## Running the code
+
+Most of the interesting stuff currently resides in the Jupyter notebooks in the
+'notebooks' folder. For dependency management, Anaconda is highly recommended.
 
 
 ## Roadmap

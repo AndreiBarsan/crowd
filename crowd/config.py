@@ -22,3 +22,6 @@ JUDGEMENT_FILE = os.path.join(DATA_ROOT, 'all_judgements.tsv')
 # Provided test data for the 1st stage of the TREC 2011 Crowdsourcing Track.
 TEST_LABEL_FILE_SHARED = os.path.join(DATA_ROOT, 'test-set-Aug-8', 'trec-cs-2011-test-set-shared.csv')
 TEST_LABEL_FILE_TEAMS = os.path.join(DATA_ROOT, 'test-set-Aug-8', 'trec-cs-2011-test-set-assigned-to-teams.csv')
+
+TOPIC_DESCRIPTION_FILE = os.path.join(DATA_ROOT, 'topics.mq09.cs2011-test-topics.xml')
+FULLTEXT_FOLDER = os.path.join(DATA_ROOT, 'url-header-html-txt')
