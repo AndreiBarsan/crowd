@@ -2,6 +2,9 @@
 
 import io
 
+from config import TEST_LABEL_FILE_SHARED, TEST_LABEL_FILE_TEAMS
+
+
 class JudgementRecord(object):
     """ Judgement record submitted in the 2011 Crowdsourcing Track.
 
@@ -82,12 +85,15 @@ class ExpertLabel(object):
         relevance = "Relevant" if self.is_relevant() else "Not relevant"
         return "%s:%s:%s" % (self.topic_id, self.document_id, relevance)
 
+
 def read_judgement_labels(file_name):
     with io.open(file_name, 'r') as f:
         return [JudgementRecord(line[:-1]) for line in f]
 
+
 def read_useful_judgement_labels(file_name):
     return [l for l in read_judgement_labels(file_name) if l.is_useful()]
+
 
 def read_expert_labels(file_name, header=False, sep=None):
     with io.open(file_name, 'r') as f:
@@ -96,6 +102,29 @@ def read_expert_labels(file_name, header=False, sep=None):
             f.readline()
         return [ExpertLabel(line.split(sep)) for line in f]
 
+
 def read_worker_labels(file_name):
     with io.open(file_name, 'r') as f:
         return [WorkerLabel(line) for line in f]
+
+
+def read_all_test_labels():
+    """Reads the 2011 test label data files, which are used as the ground truth
+    in our evaluation."""
+    return read_expert_labels(TEST_LABEL_FILE_SHARED, header=True, sep=',') + \
+        read_expert_labels(TEST_LABEL_FILE_TEAMS, header=True, sep=',')
+
+
+def get_relevant(topic_id, ground_truth_data):
+    """ Returns a set of relevant and a set of non-relevant document IDs
+    from the specified topic.
+
+    """
+    topic_test = [j for j in ground_truth_data if j.topic_id == topic_id]
+    # judgements_by_doc_id = {j.document_id : j for j in topic_test}
+
+    # TODO(andrei) Fix issue with 'is_relevant()' function for labels == -1.
+    relevant_documents = {j.document_id for j in topic_test if j.label > 0}
+    non_relevant_documents = {j.document_id for j in topic_test if j.label == 0}
+
+    return relevant_documents, non_relevant_documents

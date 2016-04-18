@@ -42,3 +42,4 @@ Most of the interesting stuff currently resides in the Jupyter notebooks in the
  * Improve existing methods using more advanced techniques, such as adaptive
    weights or combinations of techniques (poor man's boosting).
  * Explore usability of graph structure for active learning tasks.
+ * Integrate auto-reload in notebooks to improve workflow.
