@@ -26,6 +26,10 @@ class JudgementRecord(object):
         self.label_type = int(label_type)
         self.topic_id = topic_id
         self.doc_id = doc_id
+        self.relevance = relevance
+
+        # Relevance can be a floating point number indicating the probability
+        # of relevance.
         if not relevance == 'na':
             self.is_relevant = (float(relevance) >= 0.5)
         else:
@@ -128,3 +132,15 @@ def get_relevant(topic_id, ground_truth_data):
     non_relevant_documents = {j.document_id for j in topic_test if j.label == 0}
 
     return relevant_documents, non_relevant_documents
+
+
+def get_topic_judgements_by_doc_id(topic_id, judgements):
+    topic_judgements = [j for j in judgements if j.topic_id == topic_id]
+    topic_judgements_by_doc_id = {}
+    for j in topic_judgements:
+        if j.doc_id not in topic_judgements_by_doc_id:
+            topic_judgements_by_doc_id[j.doc_id] = []
+
+        topic_judgements_by_doc_id[j.doc_id].append(j)
+
+    return topic_judgements_by_doc_id

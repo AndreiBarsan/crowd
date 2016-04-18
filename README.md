@@ -43,3 +43,18 @@ Most of the interesting stuff currently resides in the Jupyter notebooks in the
    weights or combinations of techniques (poor man's boosting).
  * Explore usability of graph structure for active learning tasks.
  * Integrate auto-reload in notebooks to improve workflow.
+
+## Rough timeline
+
+### Apr 5 - Apr 19
+ * Improved graph structure visualization.
+ * Simple framework for majority voting.
+
+### Apr 19 - May 3
+ * Recreate NN and MEV experiments using graph structure.
+
+### May 3 - May 17
+ * Improve existing techniques using dynamic weights.
+
+### May 17 - May 31
+ * TBD; probably embeddings?
