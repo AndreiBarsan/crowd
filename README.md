@@ -51,10 +51,12 @@ Most of the interesting stuff currently resides in the Jupyter notebooks in the
  * Simple framework for majority voting.
 
 ### Apr 19 - May 3
+ * ReImplement Martin's sampling strategy for evaluation
+ * Filter out docs with no votes and no ground truth (toggleable)
  * Recreate NN and MEV experiments using graph structure.
 
 ### May 3 - May 17
  * Improve existing techniques using dynamic weights.
 
 ### May 17 - May 31
- * TBD; probably embeddings?
+ * Active learning inside graph.
