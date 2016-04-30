@@ -28,12 +28,19 @@ class DocumentNode(object):
             its extension).
         neighbors: A list of 'DocumentEdge' objects, representing this
             node's neighbors.
+        sim_sorted_neighbors: The 'neighbors' list, sorted by edge similarity,
+            in descending order (first element is nearest neighbor).
     """
+
     def __init__(self, topic_id, document_id, document_name, neighbors):
         self.topic_id = topic_id
         self.document_id = document_id
         self.document_name = document_name
         self.neighbors = neighbors
+        self.sim_sorted_neighbors = sorted(
+            self.neighbors,
+            key=lambda neighbor: neighbor.similarity,
+            reverse=True)
 
 
 class DocumentGraph(object):
