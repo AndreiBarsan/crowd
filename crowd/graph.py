@@ -106,7 +106,8 @@ def build_document_graph(topic, fulltext_folder, sim_threshold=0.80):
         if not np.allclose(sims[row_index], 1.0):
             # TODO(andrei) Find out why this sometimes happens and report error
             # in a kinder fashion.
-            print("WARNING: Found document not similar to itself.")
+            print("WARNING: Found document not similar to itself while "
+                  "building document graph; document ID: %s." % doc_id)
 
         # Explicitly print out larger clusters to facilitate manual inspection.
         if print_large_clusters and len(relevant_sims) > 15:
@@ -117,6 +118,6 @@ def build_document_graph(topic, fulltext_folder, sim_threshold=0.80):
     # Moreover, even though they should be, the edges aren't always 100% "undirected",
     # since (perhaps due to rounding errors) some similarity edges end up being only
     # one-way.
-    print("Built graph with %d total edges." % (total_edges / 2))
+    # print("Built graph with %d total edges." % (total_edges / 2))
 
     return DocumentGraph(topic, graph_nodes)
