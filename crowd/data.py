@@ -83,6 +83,10 @@ class ExpertLabel(object):
         self.label = int(label)
 
     def is_relevant(self):
+        raise ValueError("Don't use this, it's borked (!is_relevant does not "
+                         "imply explicit non-relevance, since it's not a binary "
+                         "relation, it's trinary since docs can have "
+                         "unestablished relevance).")
         return self.label > 0
 
     def __repr__(self):
