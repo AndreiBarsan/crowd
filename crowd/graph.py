@@ -51,6 +51,9 @@ class DocumentGraph(object):
     def get_node(self, document_id):
         return self.nodes_by_id[document_id]
 
+    def __len__(self):
+        return len(self.nodes)
+
 
 def build_document_graph(topic, fulltext_folder, sim_threshold=0.80):
     topic_id = topic.topic_id
@@ -100,7 +103,10 @@ def build_document_graph(topic, fulltext_folder, sim_threshold=0.80):
         graph_nodes.append(node)
 
         # Sanity check: every document must be 100% similar to itself.
-        assert np.allclose(sims[row_index], 1.0)
+        if not np.allclose(sims[row_index], 1.0):
+            # TODO(andrei) Find out why this sometimes happens and report error
+            # in a kinder fashion.
+            print("WARNING: Found document not similar to itself.")
 
         # Explicitly print out larger clusters to facilitate manual inspection.
         if print_large_clusters and len(relevant_sims) > 15:

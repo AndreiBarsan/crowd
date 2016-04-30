@@ -8,15 +8,15 @@ from config import TEST_LABEL_FILE_SHARED, TEST_LABEL_FILE_TEAMS
 class JudgementRecord(object):
     """ Judgement record submitted in the 2011 Crowdsourcing Track.
 
-        Attributes:
-            label_type: Additional label metadata (enum).
-                0: default
-                1. rejected label: where you would have filtered this
-                label out before subsequent use
-                2. automated label: label was produced by automation
-                (.artificial artificial artificial intelligence.)
-                3. training / quality-control label: used in training/evaluating
-                worker, not for labeling test data
+    Attributes:
+        label_type: Additional label metadata (enum).
+            0: default
+            1. rejected label: where you would have filtered this
+            label out before subsequent use
+            2. automated label: label was produced by automation
+            (.artificial artificial artificial intelligence.)
+            3. training / quality-control label: used in training/evaluating
+            worker, not for labeling test data
     """
     def __init__(self, table_row):
         attributes = table_row.split('\t')

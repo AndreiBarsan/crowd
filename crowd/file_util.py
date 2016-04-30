@@ -12,7 +12,7 @@ def get_topic_file_names(base_folder, topic_id):
 
 
 def read_file(name):
-    with io.open(name, 'r') as file:
+    with io.open(name, 'r', encoding='ISO-8859-1') as file:
         return file.read()
 
 
