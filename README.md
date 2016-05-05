@@ -53,10 +53,15 @@ Most of the interesting stuff currently resides in the Jupyter notebooks in the
 ### Apr 19 - May 3
  * Reimplement Martin's sampling strategy for evaluation
  * Filter out docs with no votes and no ground truth (toggleable) in graph
- * Recreate NN and MEV experiments using graph structure.
+ * Recreate NN and MV experiments using graph structure.
 
 ### May 3 - May 17
+ * Recreate MEV and GP aggregations.
  * Improve existing techniques using dynamic weights.
+ * Find threshold properties (low priority)
+ * Aggregated plots for everything
 
 ### May 17 - May 31
- * Active learning inside graph.
+ * Information diffusion techniques in graph.
+
+### 
