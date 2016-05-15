@@ -123,19 +123,38 @@ def read_all_test_labels():
         read_expert_labels(TEST_LABEL_FILE_TEAMS, header=True, sep=',')
 
 
+def get_all_relevant(ground_truth_data):
+    """Returns all relevant and non-relevant documents in the given ground
+    truth data.
+
+    """
+
+    relevant_documents = {j.document_id for j in ground_truth_data if j.label > 0}
+    non_relevant_documents = {j.document_id for j in ground_truth_data if j.label == 0}
+
+    return relevant_documents, non_relevant_documents
+
+
 def get_relevant(topic_id, ground_truth_data):
     """ Returns a set of relevant and a set of non-relevant document IDs
     from the specified topic.
 
     """
-    topic_test = [j for j in ground_truth_data if j.topic_id == topic_id]
-    # judgements_by_doc_id = {j.document_id : j for j in topic_test}
-
+    topic_ground_truth_data = [j for j in ground_truth_data
+                               if j.topic_id == topic_id]
     # TODO(andrei) Fix issue with 'is_relevant()' function for labels == -1.
-    relevant_documents = {j.document_id for j in topic_test if j.label > 0}
-    non_relevant_documents = {j.document_id for j in topic_test if j.label == 0}
+    return get_all_relevant(topic_ground_truth_data)
 
-    return relevant_documents, non_relevant_documents
+
+def get_all_judgements_by_doc_id(judgements):
+    judgements_by_doc_id = {}
+    for j in judgements:
+        if j.doc_id not in judgements_by_doc_id:
+            judgements_by_doc_id[j.doc_id] = []
+
+        judgements_by_doc_id[j.doc_id].append(j)
+
+    return judgements_by_doc_id
 
 
 def get_topic_judgements_by_doc_id(topic_id, judgements):
