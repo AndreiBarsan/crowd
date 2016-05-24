@@ -3,8 +3,8 @@
 import xml.etree.ElementTree
 
 
-from config import FULLTEXT_FOLDER, TOPIC_DESCRIPTION_FILE
-from file_util import get_topic_file_names
+from .config import FULLTEXT_FOLDER, TOPIC_DESCRIPTION_FILE
+from .file_util import get_topic_file_names
 
 
 class Topic(object):

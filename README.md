@@ -24,9 +24,10 @@ a paywall or at least a bureaucracy-wall.
 
 ```
 /
-/notebooks        Contains exploratory Jupyter notebooks.
-/crowd            Contains the main project code, such as the graph generation
-                  algorithms, the data classes, and the experiments.
+/crowd                  Contains the main project code, such as the graph
+                        generation algorithms, the data classes, and the
+                        experiments.
+/crowd/notebooks        Contains exploratory Jupyter notebooks.
 ```
 
 ## Running the code

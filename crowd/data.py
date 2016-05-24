@@ -2,7 +2,7 @@
 
 import io
 
-from config import TEST_LABEL_FILE_SHARED, TEST_LABEL_FILE_TEAMS
+from .config import TEST_LABEL_FILE_SHARED, TEST_LABEL_FILE_TEAMS
 
 
 class JudgementRecord(object):
