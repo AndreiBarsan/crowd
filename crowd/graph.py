@@ -1,5 +1,9 @@
 """Data holder classes and utility functions for the document similarity graph."""
 
+# pylint: disable=too-few-public-methods
+# pylint: disable=wildcard-import, unused-wildcard-import, relative-import
+
+import networkx as nx
 import numpy as np
 
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -8,10 +12,47 @@ from sklearn.metrics.pairwise import cosine_similarity
 from file_util import *
 
 
-class DocumentEdge(object):
-    """ Represents an edge in the document similarity graph.
+DEFAULT_SIMILARITY_THRESHOLD = 0.80
 
+
+class NxDocumentGraph(object):
+    """Represents a graph with document as nodes, and similarities as edges.
+
+    Uses 'NetworkX' data structures internally.
+
+    TODO(andrei): Document when to use this, and when to use the regular
+                  'DocumentGraph'.
     """
+
+    def __init__(self, topic, nx_graph):
+        self.topic = topic
+        self.nx_graph = nx_graph
+
+
+class NxDocumentNode(object):
+    """Represents a hashable document node for use in 'NxDocumentGraph'."""
+
+    def __init__(self, topic_id, document_id, document_name):
+        self.topic_id = topic_id
+        self.document_id = document_id
+        self.document_name = document_name
+
+
+    def __eq__(self, other):
+        return self.document_id == other.document_id
+
+
+    def __hash__(self):
+        return hash(self.document_id)
+
+
+    def __repr__(self):
+        return "{} (topic #{})".format(self.document_id, self.topic_id)
+
+
+class DocumentEdge(object):
+    """Represents an edge in the document similarity graph."""
+
     def __init__(self, from_document_id, to_document_id, similarity):
         self.from_document_id = from_document_id
         self.to_document_id = to_document_id
@@ -19,7 +60,7 @@ class DocumentEdge(object):
 
 
 class DocumentNode(object):
-    """ Represents a node (a document) in the document similarity graph.
+    """Represents a node (a document) in the document similarity graph.
 
     Attributes:
         topic_id: The int ID of the topic to which the document belongs.
@@ -44,9 +85,7 @@ class DocumentNode(object):
 
 
 class DocumentGraph(object):
-    """ Represents a graph with documents as nodes, and similarities as
-    edges.
-
+    """Represents a graph with documents as nodes, and similarities as edges.
     """
 
     def __init__(self, topic, nodes):
@@ -62,7 +101,50 @@ class DocumentGraph(object):
         return len(self.nodes)
 
 
-def build_document_graph(topic, fulltext_folder, sim_threshold=0.80):
+def build_nx_document_graph(topic,
+                            fulltext_folder,
+                            sim_threshold=DEFAULT_SIMILARITY_THRESHOLD):
+    """Builds a document graph using NetworkX."""
+
+    print("Building nx doc graph")
+
+    topic_id = topic.topic_id
+    file_names = get_topic_file_names(fulltext_folder, str(topic_id))
+    file_names_np = np.array(file_names)
+    _, corpus = get_topic_files(fulltext_folder, str(topic_id))
+
+    vectorizer = TfidfVectorizer(min_df=1)
+    term_doc_matrix = vectorizer.fit_transform([text for doc_id, text in corpus])
+    similarities = cosine_similarity(term_doc_matrix)
+
+    nx_graph = nx.Graph()
+
+    for row_index in range(len(similarities)):
+        sims = similarities[row_index]
+        doc_id, document = corpus[row_index]
+
+        mask = sims > sim_threshold
+        # Make sure we don't have an edge to ourselves, since we're always
+        # 100% similar to ourselves.
+        mask[row_index] = False
+        relevant_sims = sims[mask]
+        relevant_docs = file_names_np[mask]
+
+        node = NxDocumentNode(topic_id, doc_id, file_names_np[row_index])
+        nx_graph.add_node(node)
+
+        for sim, other_doc_name in zip(relevant_sims, relevant_docs):
+            other_doc_id = other_doc_name[:other_doc_name.rfind('.')]
+            other_node = NxDocumentNode(topic_id, other_doc_id, other_doc_name)
+            nx_graph.add_edge(node, other_node, {'similarity': sim})
+            # neighbors.append(DocumentEdge(doc_id, other_doc_id, sim))
+
+    return NxDocumentGraph(topic, nx_graph)
+
+
+def build_document_graph(topic,
+                         fulltext_folder,
+                         sim_threshold=DEFAULT_SIMILARITY_THRESHOLD):
     topic_id = topic.topic_id
     file_names = get_topic_file_names(fulltext_folder, str(topic_id))
     file_names_np = np.array(file_names)
