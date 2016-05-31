@@ -1,7 +1,8 @@
 """Data holder classes and utility functions for the document similarity graph."""
 
 # pylint: disable=too-few-public-methods
-# pylint: disable=wildcard-import, unused-wildcard-import, relative-import
+# pylint: disable=wildcard-import, unused-wildcard-import
+# pylint: disable=superfluous-parens
 
 import networkx as nx
 import numpy as np
@@ -10,6 +11,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from .file_util import *
+from .data import get_relevant
 
 
 DEFAULT_SIMILARITY_THRESHOLD = 0.80
@@ -48,6 +50,14 @@ class NxDocumentNode(object):
 
     def __repr__(self):
         return "{} (topic #{})".format(self.document_id, self.topic_id)
+
+
+    def __str__(self):
+        name = self.document_name
+        # TODO(andrei): Unify with notebook constants.
+        SHORT_NAME_OFFSET = 7
+        short_name = name[name.rfind('-') - SHORT_NAME_OFFSET : name.rfind('.')]
+        return short_name
 
 
 class DocumentEdge(object):
@@ -102,11 +112,20 @@ class DocumentGraph(object):
 
 
 def build_nx_document_graph(topic,
+                            ground_truth_data,
+                            vote_data,
                             fulltext_folder,
-                            sim_threshold=DEFAULT_SIMILARITY_THRESHOLD):
+                            sim_threshold=DEFAULT_SIMILARITY_THRESHOLD,
+                            **kw):
     """Builds a document graph using NetworkX."""
 
     print("Building nx doc graph")
+    # Whether we should ignore nodes which have no ground truth information,
+    # and no votes.
+    discard_empty = kw.get('discard_empty', False)
+
+    relevant_documents, non_relevant_documents = get_relevant(topic.topic_id,
+                                                              ground_truth_data)
 
     topic_id = topic.topic_id
     file_names = get_topic_file_names(fulltext_folder, str(topic_id))
@@ -118,11 +137,38 @@ def build_nx_document_graph(topic,
     similarities = cosine_similarity(term_doc_matrix)
 
     nx_graph = nx.Graph()
+    assert isinstance(vote_data, dict), "Vote data should be a map."
+    print("{} relevant documents".format(len(relevant_documents)))
+    print("{} non-relevant documents".format(len(non_relevant_documents)))
+    print("{} documents with votes".format(len(vote_data.keys())))
 
+    hidden_nodes = set()
+
+    # Construct the nodes
     for row_index in range(len(similarities)):
         sims = similarities[row_index]
-        doc_id, document = corpus[row_index]
+        doc_id, _ = corpus[row_index]
 
+        # If the option is enabled, prevent notes with no information (ground
+        # truth or votes) from being added to the graph.
+        if discard_empty and                           \
+           doc_id not in relevant_documents and        \
+           doc_id not in non_relevant_documents and    \
+           doc_id not in vote_data:
+            hidden_nodes.add(doc_id)
+            continue
+
+        node = NxDocumentNode(topic_id, doc_id, file_names_np[row_index])
+        nx_graph.add_node(node)
+
+    # Construct the edges
+    for row_index in range(len(similarities)):
+        sims = similarities[row_index]
+        doc_id, _ = corpus[row_index]
+        if doc_id in hidden_nodes:
+            continue
+
+        node = NxDocumentNode(topic_id, doc_id, file_names_np[row_index])
         mask = sims > sim_threshold
         # Make sure we don't have an edge to ourselves, since we're always
         # 100% similar to ourselves.
@@ -130,15 +176,16 @@ def build_nx_document_graph(topic,
         relevant_sims = sims[mask]
         relevant_docs = file_names_np[mask]
 
-        node = NxDocumentNode(topic_id, doc_id, file_names_np[row_index])
-        nx_graph.add_node(node)
+        for sim, other_doc_file_name in zip(relevant_sims, relevant_docs):
+            other_doc_id = other_doc_file_name[:other_doc_file_name.rfind('.')]
 
-        for sim, other_doc_name in zip(relevant_sims, relevant_docs):
-            other_doc_id = other_doc_name[:other_doc_name.rfind('.')]
-            other_node = NxDocumentNode(topic_id, other_doc_id, other_doc_name)
+            if other_doc_id in hidden_nodes:
+                continue
+
+            other_node = NxDocumentNode(topic_id, other_doc_id, other_doc_file_name)
             nx_graph.add_edge(node, other_node, {'similarity': sim})
-            # neighbors.append(DocumentEdge(doc_id, other_doc_id, sim))
 
+    print("{} hidden nodes (due to no data)".format(len(hidden_nodes)))
     return NxDocumentGraph(topic, nx_graph)
 
 

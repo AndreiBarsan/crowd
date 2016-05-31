@@ -43,7 +43,6 @@ Most of the interesting stuff currently resides in the Jupyter notebooks in the
  * Improve existing methods using more advanced techniques, such as adaptive
    weights or combinations of techniques (poor man's boosting).
  * Explore usability of graph structure for active learning tasks.
- * Integrate auto-reload in notebooks to improve workflow.
 
 ## Rough timeline
 
@@ -57,12 +56,11 @@ Most of the interesting stuff currently resides in the Jupyter notebooks in the
  * Recreate NN and MV experiments using graph structure.
 
 ### May 3 - May 17
- * Recreate MEV and GP aggregations.
  * Improve existing techniques using dynamic weights.
  * Find threshold properties (low priority)
  * Aggregated plots for everything
 
-### May 17 - May 31
+### May 17 - June 5
  * Information diffusion techniques in graph.
 
 ### 
