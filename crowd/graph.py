@@ -30,6 +30,11 @@ class NxDocumentGraph(object):
         self.topic = topic
         self.nx_graph = nx_graph
 
+    def get_nodes(self):
+        return self.nx_graph.nodes()
+
+    nodes = property(get_nodes, None, None)
+
 
 class NxDocumentNode(object):
     """Represents a hashable document node for use in 'NxDocumentGraph'."""
@@ -37,6 +42,9 @@ class NxDocumentNode(object):
     def __init__(self, topic_id, document_id, document_name):
         self.topic_id = topic_id
         self.document_id = document_id
+        # The document ID is immutable, so we cache its hash since early
+        # profiling indicates that it's quite slow to compute.
+        self.doc_id_hash = hash(self.document_id)
         self.document_name = document_name
 
 
@@ -45,7 +53,7 @@ class NxDocumentNode(object):
 
 
     def __hash__(self):
-        return hash(self.document_id)
+        return self.doc_id_hash
 
 
     def __repr__(self):

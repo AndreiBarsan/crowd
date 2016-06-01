@@ -2,6 +2,7 @@
 
 # pylint: disable=missing-docstring, superfluous-parens
 
+from abc import ABC, abstractmethod
 import random
 
 from sklearn.externals.joblib import Parallel, delayed
@@ -12,11 +13,27 @@ DEFAULT_BUDGET = 250
 # Use all cores for parallel stuff.
 N_CORES = -1
 
+class DocumentSampler(ABC):
+    def __init__(self):
+        pass
 
-def get_document_with_least_votes(vote_map):
-    # TODO(andrei) Use heap, or even integrate in graph.
-    # Sort the map by the values and return the key with the smallest value.
-    return (sorted(vote_map.items(), key=lambda i: len(i[1])))[0][0]
+    @abstractmethod
+    def sample(self, existing_votes):
+        """Selects a document based on the existing votes."""
+        pass
+
+
+class LeastVotesSampler(DocumentSampler):
+
+    def __init__(self):
+        pass
+
+    def sample(self, existing_votes):
+        """Selects a document from the set of documents with minimal votes."""
+        # TODO(andrei) Use heap, or even integrate in graph.
+
+        # Sort the map by the values and return the key with the smallest value.
+        return (sorted(existing_votes.items(), key=lambda i: len(i[1])))[0][0]
 
 
 def request_vote(topic_judgements, document_id):
@@ -57,7 +74,7 @@ def measure_accuracy(evaluated_judgements, ground_truth, topic_judgements):
 
 
 def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
-                       vote_aggregation, **kw):
+                       document_sampler, vote_aggregation, **kw):
     """ Performs a single iteration of a learning curve simulation.
 
     Please see the 'evaluate' function for more information.
@@ -78,8 +95,8 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
     # TODO(andrei) Numpyfy: accuracies = np.zeros(budget // accuracy_every)
     accuracies = []
     for i in range(budget):
-        # 1. Pick document (with lowest number of votes)
-        document_id = get_document_with_least_votes(sampled_votes)
+        # 1. Pick document according to sampling strategy
+        document_id = document_sampler.sample(sampled_votes)
 
         # 2. Request a vote for that document (sample with replacement)
         vote = request_vote(topic_judgements, document_id)
@@ -100,8 +117,8 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
 # Avoids re-creating the worker pool every time we invoke 'evaluate'.
 WORKER_POOL = Parallel(n_jobs=N_CORES)
 
-def evaluate(topic_graph, topic_judgements, ground_truth, vote_aggregation,
-             **kw):
+def evaluate(topic_graph, topic_judgements, ground_truth, document_sampler,
+             vote_aggregation, **kw):
     """ Evaluates a vote aggregation strategy for the specified topic.
 
     Args:
@@ -119,20 +136,30 @@ def evaluate(topic_graph, topic_judgements, ground_truth, vote_aggregation,
 
     Notes:
         TODO(andrei) Consider using loggers to control output verbosity.
-
     """
+
     iterations = kw['iterations'] if 'iterations' in kw else 10
-    # progress_every = kw['progress_every'] if 'progress_every' in kw else 50
     # verbose = kw['verbose'] if 'verbose' in kw else False
 
 #     print("Performing evaluation of topic [{}].".format(topic_graph.topic))
 #     print("Aggregation function: [{}]".format(vote_aggregation))
 
-    # TODO(andrei) Consider thresholding and using serial processing for less than
-    # k iterations.
-    all_accuracies = WORKER_POOL(
-        delayed(evaluate_iteration)(topic_graph, topic_judgements, ground_truth, vote_aggregation, **kw)
-        for idx in range(iterations))
+    # TODO(andrei): Make this cleaner, and get rid of the factory hack.
+    if hasattr(document_sampler, '__call__'):
+        # Treat it as a factory.
+        all_accuracies = WORKER_POOL(
+            delayed(evaluate_iteration)(topic_graph, topic_judgements,
+                                        ground_truth, document_sampler(),
+                                        vote_aggregation, **kw)
+            for idx in range(iterations))
+    else:
+        # TODO(andrei) Consider thresholding and using serial processing for less than
+        # k iterations.
+        all_accuracies = WORKER_POOL(
+            delayed(evaluate_iteration)(topic_graph, topic_judgements,
+                                        ground_truth, document_sampler,
+                                        vote_aggregation, **kw)
+            for idx in range(iterations))
 
     return all_accuracies
 
