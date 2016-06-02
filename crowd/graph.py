@@ -48,6 +48,16 @@ class NxDocumentNode(object):
         self.document_name = document_name
 
 
+    def __lt__(self, other):
+        """Naive comparison for shutting up heap operations, among other things.
+        """
+        return self.document_id < other.document_id
+
+    def __gt__(self, other):
+        # TODO(andrei): Is this necessary?
+        return self.document_id > other.document_id
+
+
     def __eq__(self, other):
         return self.document_id == other.document_id
 
