@@ -72,3 +72,5 @@ output
 # Generic project-specific dumps
 data/
 out/
+.idea/
+plots/

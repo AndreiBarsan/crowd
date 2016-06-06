@@ -117,6 +117,7 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
 # Avoids re-creating the worker pool every time we invoke 'evaluate'.
 WORKER_POOL = Parallel(n_jobs=N_CORES)
 
+
 def evaluate(topic_graph, topic_judgements, ground_truth, document_sampler,
              vote_aggregation, **kw):
     """ Evaluates a vote aggregation strategy for the specified topic.

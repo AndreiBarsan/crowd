@@ -25,10 +25,17 @@ class NxDocumentGraph(object):
     TODO(andrei): Document when to use this, and when to use the regular
                   'DocumentGraph'.
     """
-
     def __init__(self, topic, nx_graph):
         self.topic = topic
         self.nx_graph = nx_graph
+        # TODO(andrei): Cleaner version of this after you sleep more.
+        self.node_map = {node.document_id:node for node in nx_graph.nodes()}
+
+    def get_node(self, node_id):
+        print("Getting node of ID={}".format(node_id))
+        result = self.node_map[node_id]
+        print("Result of node get: {}".format(result))
+        return result
 
     def get_nodes(self):
         return self.nx_graph.nodes()
@@ -47,35 +54,30 @@ class NxDocumentNode(object):
         self.doc_id_hash = hash(self.document_id)
         self.document_name = document_name
 
-
     def __lt__(self, other):
-        """Naive comparison for shutting up heap operations, among other things.
-        """
+        """Naive comparison required for e.g. heap operations."""
         return self.document_id < other.document_id
 
-    def __gt__(self, other):
-        # TODO(andrei): Is this necessary?
-        return self.document_id > other.document_id
-
-
     def __eq__(self, other):
-        return self.document_id == other.document_id
-
+        if isinstance(other, str):
+            return self.document_id == other
+        else:
+            return self.document_id == other.document_id
 
     def __hash__(self):
         return self.doc_id_hash
 
-
     def __repr__(self):
-        return "{} (topic #{})".format(self.document_id, self.topic_id)
-
+        # TODO(andrei): Make sure that it's OK to not include topic ID.
+        return "{}".format(self.document_id)
 
     def __str__(self):
         name = self.document_name
         # TODO(andrei): Unify with notebook constants.
-        SHORT_NAME_OFFSET = 7
-        short_name = name[name.rfind('-') - SHORT_NAME_OFFSET : name.rfind('.')]
-        return short_name
+        #SHORT_NAME_OFFSET = 7
+        #short_name = name[name.rfind('-')-SHORT_NAME_OFFSET:name.rfind('.')]
+        #return short_name
+        return "NxDocumentNode({0}, {1})".format(self.topic_id, self.document_id)
 
 
 class DocumentEdge(object):
@@ -116,11 +118,12 @@ class DocumentGraph(object):
     """Represents a graph with documents as nodes, and similarities as edges.
     """
 
-    def __init__(self, topic, nodes):
+    def __init__(self, topic, nodes, sim_threshold):
         self.nodes = nodes
         self.topic = topic
         self.topic_id = topic.number
         self.nodes_by_id = {node.document_id: node for node in nodes}
+        self.sim_threshold = sim_threshold
 
     def get_node(self, document_id):
         return self.nodes_by_id[document_id]
@@ -274,4 +277,4 @@ def build_document_graph(topic,
     # one-way.
     # print("Built graph with %d total edges." % (total_edges / 2))
 
-    return DocumentGraph(topic, graph_nodes)
+    return DocumentGraph(topic, graph_nodes, sim_threshold)

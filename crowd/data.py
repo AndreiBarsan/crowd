@@ -1,6 +1,7 @@
 """Data holder classes and utility functions for the project."""
 
 import io
+from typing import Mapping, Sequence
 
 from .config import TEST_LABEL_FILE_SHARED, TEST_LABEL_FILE_TEAMS
 
@@ -157,7 +158,7 @@ def get_all_judgements_by_doc_id(judgements):
     return judgements_by_doc_id
 
 
-def get_topic_judgements_by_doc_id(topic_id, judgements):
+def get_topic_judgements_by_doc_id(topic_id, judgements) -> Mapping[str, Sequence[JudgementRecord]]:
     topic_judgements = [j for j in judgements if j.topic_id == topic_id]
     topic_judgements_by_doc_id = {}
     for j in topic_judgements:
