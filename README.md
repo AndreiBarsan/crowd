@@ -24,6 +24,11 @@ a paywall or at least a bureaucracy-wall.
 
 ```
 /
+/print_todos.sh         @Valloric's ag-powered TODO search tool.
+/README.md              You're reading this right now!
+/remote_output.py       Utility for stripping all output from a Jupyter
+                        notebook.
+/TODO.md                Very general project TODOs.
 /crowd                  Contains the main project code, such as the graph
                         generation algorithms, the data classes, and the
                         experiments.
@@ -43,6 +48,9 @@ Most of the interesting stuff currently resides in the Jupyter notebooks in the
  * Improve existing methods using more advanced techniques, such as adaptive
    weights or combinations of techniques (poor man's boosting).
  * Explore usability of graph structure for active learning tasks.
+ * Integrate Gaussian Process aggregation into this project somehow,
+   even if it confines to project to just running on Euler for the time
+   being.
 
 ## Rough timeline
 
@@ -60,7 +68,5 @@ Most of the interesting stuff currently resides in the Jupyter notebooks in the
  * Find threshold properties (low priority)
  * Aggregated plots for everything
 
-### May 17 - June 5
+### May 17 - August
  * Information diffusion techniques in graph.
-
-### 
