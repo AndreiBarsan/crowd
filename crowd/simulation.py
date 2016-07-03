@@ -4,12 +4,16 @@
 
 from abc import ABC, abstractmethod
 import random
-from typing import Mapping, Sequence, Tuple
+from typing import Mapping, Sequence, Tuple, Callable, Union
 
+import numpy as np
+import pandas as pd
 from sklearn.externals.joblib import Parallel, delayed
 
-from crowd.data import ExpertLabel, JudgementRecord
-
+from crowd.data import ExpertLabel, JudgementRecord, \
+    get_topic_judgements_by_doc_id
+from crowd.graph import NxDocumentGraph, DocumentGraph
+from crowd.topic import Topic
 
 DEFAULT_BUDGET = 250
 
@@ -104,19 +108,19 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
     # TODO(andrei) Numpyfy: accuracies = np.zeros(budget // accuracy_every)
     accuracies = []
     for i in range(budget):
-        # 1. Pick document according to sampling strategy
+        # 1. Pick document according to sampling strategy.
         document_id = document_sampler.sample(sampled_votes, topic_judgements)
 
-        # 2. Request a vote for that document (sample with replacement)
+        # 2. Request a vote for that document (sample with replacement).
         vote = request_vote(topic_judgements, document_id)
         sampled_votes[document_id].append(vote)
 
         if i % accuracy_every == 0:
-            # 3. Perform the aggregation
+            # 3. Perform the aggregation.
             evaluated_judgements = vote_aggregation(topic_graph, sampled_votes,
                                                     **kw)
 
-            # 4. Measure accuracy
+            # 4. Measure accuracy.
             accuracy = measure_accuracy(evaluated_judgements, ground_truth,
                                         topic_judgements)
             accuracies.append(accuracy)
@@ -129,6 +133,7 @@ WORKER_POOL = Parallel(n_jobs=N_CORES)
 
 def evaluate(topic_graph,
              topic_judgements: Mapping[str, Sequence[JudgementRecord]],
+             # TODO(andrei): rename to e.g. ground_truth_by_doc_id
              ground_truth: Mapping[str, ExpertLabel],
              document_sampler,
              vote_aggregation,
@@ -158,8 +163,9 @@ def evaluate(topic_graph,
     iterations = kw.get('iterations', 10)
     # verbose = kw['verbose'] if 'verbose' in kw else False
 
-#     print("Performing evaluation of topic [{}].".format(topic_graph.topic))
-#     print("Aggregation function: [{}]".format(vote_aggregation))
+    print("Performing evaluation of topic [{}].".format(topic_graph.topic))
+    print("Aggregation function: [{}]".format(vote_aggregation))
+
     import time
     start = time.time()
 
@@ -169,7 +175,8 @@ def evaluate(topic_graph,
         # own state, in which case we want each task to have its own copy.
         all_accuracies = WORKER_POOL(
             delayed(evaluate_iteration)(topic_graph, topic_judgements,
-                                        ground_truth, document_sampler(),
+                                        ground_truth,
+                                        document_sampler(topic_graph),
                                         vote_aggregation, **kw)
             for idx in range(iterations))
     else:
@@ -183,4 +190,93 @@ def evaluate(topic_graph,
     end = time.time()
     duration = end - start
     return all_accuracies, duration
+
+
+# TODO(andrei): Experiment or Context class to wrap around judgement and
+# ground truth data.
+
+def build_learning_curve(
+        graph: Union[NxDocumentGraph, DocumentGraph],
+        aggregation_function,   # TODO(andrei): Class for all aggregation & Type hint.
+        judgements: Mapping[str, Sequence[JudgementRecord]],
+        ground_truth: Sequence[ExpertLabel],
+        document_sampler: DocumentSampler,
+        **kw):
+    """Returns a numpy array with growing accuracy, up to 'max_votes'."""
+
+    print("Start: build_learning_curve")
+
+    # TODO(andrei): Rename topic.
+    topic = graph.topic
+    topic_judgements = get_topic_judgements_by_doc_id(topic.topic_id,
+                                                      judgements)
+    topic_ground_truth = {truth.document_id: truth for truth in ground_truth
+                          if truth.topic_id == topic.topic_id}
+
+    # i.e. up to target_votes votes per doc, on average.
+    # TODO(andrei) Make this cleaner and more seamless.
+    max_votes = kw['max_votes'] if 'max_votes' in kw else 3
+    bud = len(topic_judgements) * max_votes
+    acc, eval_time_s = evaluate(
+        graph,
+        topic_judgements,
+        topic_ground_truth,
+        document_sampler,
+        aggregation_function,
+        budget=bud,
+        **kw)
+
+    # Note: this result is still indexed by-vote.
+    acc = np.array(acc)
+    acc_avg = np.mean(acc, axis=0)
+    return acc_avg
+
+
+def learning_curve_frame(graph,
+                         aggregation,
+                         label,
+                         document_count,
+                         judgements: Mapping[str, Sequence[JudgementRecord]],
+                         ground_truth: Sequence[ExpertLabel],
+                         document_sampler: DocumentSampler,
+                         **kw):
+    """Helper proxy for 'build_learning_curve'.
+
+    Wraps its result in a pandas dataframe, and normalizes the index so that
+    it represents average votes per document. This makes it much, much easier
+    to perform e.g. cross-topic aggregations, when different topics have
+    different document counts (which means we need different numbers of votes
+    in order to reach the same mean nr. votes per document).
+    """
+
+    sample_count = kw.get('sample_count', 100)
+    # Accuracy as expressed in votes_per_doc space.
+    acc_avg = build_learning_curve(graph, aggregation, judgements, ground_truth,
+                                   document_sampler, **kw)
+    frame = pd.DataFrame({label: acc_avg})
+
+    # This reindexes the learning curves onto a real mean-votes-per-doc
+    # axis, which involves a little resampling.
+    new_index = np.linspace(0, len(acc_avg) / document_count, sample_count)
+    acc_avg_resampled = np.interp(
+        new_index,
+        # Sampling x coords
+        np.linspace(0, len(acc_avg) / document_count, len(acc_avg)),
+        # Values to sample
+        acc_avg)
+    #     classic = frame
+    frame = pd.DataFrame({label: acc_avg_resampled}, index=new_index)
+
+    #     return frame, classic
+    return frame
+
+# This code showcases the (very small) discrepancy between the original dataset
+# and the resampled one.
+# f, classic = learning_curve_frame(
+#     '20424',
+#     mv_config.vote_aggregator,
+#     "lbl",
+#     len(get_topic_judgements_by_doc_id('20424', judgements)))
+# plt.plot(f.index, f['lbl'])
+# plt.plot(classic.index / 100.0, classic['lbl'])
 

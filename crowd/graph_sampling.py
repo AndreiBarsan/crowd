@@ -255,6 +255,11 @@ class LazyGreedyGraphSpreadSampler(DocumentSampler):
         _, self.best_spread, self.best_node = heapq.heappop(self.best_heap)
         # print("Budget: {}/{}, Spread: {:.2f}".format(index + 1, budget, best_spread))
         self.seed_set.add(self.best_node)
+
+        if self.best_node.document_id not in available_topic_judgement:
+            print(available_topic_judgement)
+            raise ValueError("Sanity check failed.")
+
         return self.best_node.document_id
 
 # TODO(andrei): Improve modularization, and use more specific name for 'evaluate' 'iterations' arg.
@@ -262,10 +267,19 @@ class LazyGreedyGraphSpreadSampler(DocumentSampler):
 def lgss_factory(graph, iteration_count):
     """Ensures that each worker in 'evaluate' has its own copy of the sampler (which is stateful!)."""
 
+    # TODO(andrei): No longer use this!
+
     def res():
         return LazyGreedyGraphSpreadSampler(graph,
                                             iteration_count=iteration_count)
 
+    return res
+
+
+def lgss_graph_factory(iteration_count):
+    """Same as above, but doesn't need the graph from the beginning."""
+    def res(graph):
+        return LazyGreedyGraphSpreadSampler(graph, iteration_count=iteration_count)
     return res
 
 
@@ -295,14 +309,14 @@ def compare_sampling(tid, sim_threshold, discard_empty_nodes=True):
     print("Ground truths: {}".format(len(topic_ground_truth.keys())))
 
     graph_simulation_iterations = 5
-    aggregation_iterations = 25
+    aggregation_iterations = 10
     print("Computing results for IC Information Spread Sampler...")
 
     ic_graph_result, ic_time_s = evaluate(
         nx_graph,
         topic_judgements,
         topic_ground_truth,
-        lgss_factory(nx_graph, graph_simulation_iterations),
+        lgss_graph_factory(graph_simulation_iterations),
         aggregate_mev_nx,
         budget=len(topic_judgements.keys()),
         iterations=aggregation_iterations)
@@ -354,3 +368,4 @@ def compare_sampling(tid, sim_threshold, discard_empty_nodes=True):
     #         sim_threshold,
     #         aggregation_iterations)
     #     plt.savefig('../plots/{}.svg'.format(plotname))
+

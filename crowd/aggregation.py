@@ -71,6 +71,99 @@ def majority(votes, tie_handling=COIN_FLIP) -> bool:
                          .format(tie_handling))
 
 
+def aggregate_MV_NN(topic_graph, all_sampled_votes, **kw):
+    """Majority voting which tries to steal votes from the closest neighbor.
+
+    This method is similar to 'aggregate_MV', but also tries to take some
+    document similarity information into account.
+
+    Args:
+        topic_graph: The current topic's document graph. Not used.
+        all_sampled_votes: A map from document ID to a list of sampled
+            'JudgementRecord's.
+        rho_s: The similarity threshold below which we ignore the nearest
+            neighbor.
+        seek_good_neighbor: Enables a more thorough nearest neighbor search,
+            not stopping at the very first neighbor, but at the nearest
+            neighbor which also has at least 'min_votes' votes.
+
+    Returns:
+        A map which contains a boolean relevance for every document.
+    """
+
+    rho_s = kw.get('rho_s', 0.9)
+    del kw['rho_s']  # TODO(andrei) Do this in a nicer way.
+    seek_good_neighbor = kw.get('seek_good_neighbor', False)
+
+    if seek_good_neighbor:
+        aggregator = majority_with_nn_seek
+    else:
+        aggregator = majority_with_nn
+
+    return {document_id: aggregator(topic_graph, document_id,
+                                    document_votes, all_sampled_votes,
+                                    rho_s, **kw)
+            for (document_id, document_votes) in all_sampled_votes.items()}
+
+
+def majority_with_nn(topic_graph, doc_id, votes, all_sampled_votes, rho_s,
+                     **kw):
+    node = topic_graph.get_node(doc_id)
+
+    if len(node.neighbors) == 0:
+        # No neighbors in graph.
+        return majority(votes)
+
+    nn = node.sim_sorted_neighbors[0]
+    if nn.similarity < rho_s:
+        # Nearest neighbor is not near enough.
+        return majority(votes)
+
+    if nn.to_document_id not in all_sampled_votes:
+        # Neighbor has no votes.
+        # Note: The original MVNN code simply looks at the most similar
+        # neighbor, and adds its votes. If it has no votes, then tough luck.
+        return majority(votes)
+
+    neighbor_votes = all_sampled_votes[nn.to_document_id]
+    return majority(votes + neighbor_votes)
+
+
+def majority_with_nn_seek(topic_graph, doc_id, votes, all_sampled_votes, rho_s,
+                          **kw):
+    """Seeks the nearest neighbor which also has some votes."""
+    node = topic_graph.get_node(doc_id)
+    min_votes = kw.get('min_votes', 1)
+
+    if len(node.neighbors) == 0:
+        # No neighbors in graph.
+        return majority(votes)
+
+    index = 0
+    while index < len(node.neighbors):
+        nn = node.sim_sorted_neighbors[index]
+        index += 1
+
+        if nn.similarity < rho_s:
+            # Nearest neighbor is not near enough.
+            continue
+
+        if nn.to_document_id not in all_sampled_votes:
+            # Neighbor has no vote data.
+            continue
+
+        neighbor_votes = all_sampled_votes[nn.to_document_id]
+        if len(neighbor_votes) < min_votes:
+            # Neighbor doesn't have enough votes for us to care.
+            continue
+
+        # Found a good neighbor. Stop the search.
+        return majority(votes + neighbor_votes)
+
+    # No good neighbor found.
+    return majority(votes)
+
+
 def aggregate_MV(topic_graph, all_sampled_votes, **kw):
     """The default way of aggregating crowdsourcing votes.
 

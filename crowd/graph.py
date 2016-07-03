@@ -28,6 +28,7 @@ class NxDocumentGraph(object):
     def __init__(self, topic, nx_graph):
         self.topic = topic
         self.nx_graph = nx_graph
+
         # TODO(andrei): Cleaner version of this after you sleep more.
         self.node_map = {node.document_id:node for node in nx_graph.nodes()}
 
