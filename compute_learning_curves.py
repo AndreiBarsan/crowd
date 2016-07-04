@@ -4,9 +4,11 @@
 import logging
 import os
 import pickle
+import random
 from typing import Sequence, Mapping
 
 import click
+import numpy as np
 
 from crowd.aggregation import *
 from crowd.config import JUDGEMENT_FILE, FULLTEXT_FOLDER
@@ -16,6 +18,9 @@ from crowd.experiment_config import ExperimentConfig
 from crowd.graph import *
 from crowd.graph_sampling import lgss_graph_factory
 from crowd.topic import load_topic_metadata
+
+random.seed(0x7788)
+np.random.seed(0x7788)
 
 
 # Various experiment configs from the original comparison notebook.
@@ -69,27 +74,34 @@ class ExperimentData(object):
         self.topic_id_to_graph = topic_id_to_graph
 
 
-def load_experiment_data() -> ExperimentData:
+def load_experiment_data(use_cache=True) -> ExperimentData:
+    """Utility for loading experiment data which caches preprocessing.
+
+    Pre-computed document similarity graphs are cached for fast later retrieval.
+    """
     id_topic_info = load_topic_metadata()
 
-    cache_dir = os.path.join('.', 'cache')
-    if not os.path.exists(cache_dir):
-        os.mkdir(cache_dir)
+    if use_cache:
+        cache_dir = os.path.join('.', 'cache')
+        if not os.path.exists(cache_dir):
+            os.mkdir(cache_dir)
 
-    cache_fname = 'exp-data-{0}-{1}.pkl'.format(
-        SIM_THRESHOLD,
-        'discard-empty' if DISCARD_EMPTY_NODES else 'no-discard-empty')
-    cache_path = os.path.join(cache_dir, cache_fname)
+        cache_fname = 'exp-data-{0}-{1}.pkl'.format(
+            SIM_THRESHOLD,
+            'discard-empty' if DISCARD_EMPTY_NODES else 'no-discard-empty')
+        cache_path = os.path.join(cache_dir, cache_fname)
 
-    if os.path.exists(cache_path):
-        logging.info("Loading cached graphs from %s.", cache_path)
-        with open(cache_path, 'rb') as cache_file:
-            pickled_experiment_data = pickle.load(cache_file)
-            assert isinstance(pickled_experiment_data, ExperimentData)
-            return pickled_experiment_data
+        if os.path.exists(cache_path):
+            logging.info("Loading cached graphs from %s.", cache_path)
+            with open(cache_path, 'rb') as cache_file:
+                pickled_experiment_data = pickle.load(cache_file)
+                assert isinstance(pickled_experiment_data, ExperimentData)
+                return pickled_experiment_data
+        else:
+            logging.info("No cache found in directory %s. Computing graph from"
+                         " scratch.", cache_dir)
     else:
-        logging.info("No cache found in directory %s. Computing graph from"
-                     " scratch.", cache_dir)
+        logging.info("Not using caching.")
 
     # TODO(andrei): Better names for these functions!
     turk_judgements = read_useful_judgement_labels(JUDGEMENT_FILE)
@@ -111,10 +123,11 @@ def load_experiment_data() -> ExperimentData:
     experiment_data = ExperimentData(turk_judgements, ground_truth,
                                      id_topic_nx_graph, id_topic_graph)
 
-    with open(cache_path, 'wb') as cache_file:
-        logging.info("Caching experiment data...")
-        pickle.dump(experiment_data, cache_file)
-        logging.info("Finished caching experiment data.")
+    if use_cache:
+        with open(cache_path, 'wb') as cache_file:
+            logging.info("Caching experiment data...")
+            pickle.dump(experiment_data, cache_file)
+            logging.info("Finished caching experiment data.")
 
     return experiment_data
 
@@ -122,7 +135,17 @@ def load_experiment_data() -> ExperimentData:
 @click.command()
 @click.option('--label', default="", help="A short description of the"
                                           " experiment.")
-def learning_curves(label):
+@click.option('--aggregation_iterations',
+              default=15,
+              help="How many times to simulate the entire voting process."
+                   " Necessary due to the randomness of vote sampling, among"
+                   " other things.")
+@click.option('--result_pickle_root',
+              default='experiments/',
+              help="Folder where to pickle experiment results for later"
+                   " inspection.")
+def learning_curves(label, aggregation_iterations, result_pickle_root):
+    # TODO(andrei): Use label!
     cross_topic_experiments = [
         # experimental_IC_config,
         mv_config,
@@ -131,15 +154,18 @@ def learning_curves(label):
         mev_2_config,
         mev_3_config]
 
+    if not os.path.exists(result_pickle_root):
+        os.mkdir(result_pickle_root)
+
     logging.info("Will compute experiments for %d configurations.",
                  len(cross_topic_experiments))
 
     logging.info("Loading experiment data...")
-    experiment_data = load_experiment_data()
+    experiment_data = load_experiment_data(use_cache=False)
     logging.info("Finished loading experiment data.")
 
     up_to_votes_per_doc = 1
-    aggregation_iterations = 10         # CHANGE THIS! AT LEAST 15!
+    topic_limit = 3
 
     logging.info("Kicking off computation...")
     all_frames = compute_cross_topic_learning(
@@ -147,23 +173,39 @@ def learning_curves(label):
         up_to_votes_per_doc,
         aggregation_iterations,
         experiment_data,
-        topic_limit=3)
+        topic_limit=topic_limit)
     logging.info("Completed computation.")
 
-    # TODO(andrei): Pickle intermediate results.
     # TODO(andrei): Add option to simple re-plot old pickle.
 
+    now = datetime.now()
+    timestamp = int(now.timestamp())
+    experiment_folder_name = 'curves-upto-{0}-topic-limit-{1}-{2}'.format(
+        up_to_votes_per_doc, topic_limit, timestamp)
+    experiment_folder_path = os.path.join(result_pickle_root, experiment_folder_name)
+    os.mkdir(experiment_folder_path)
+
+    # TODO(andrei): Re-enable after fixing lambdas OR using dill.
+    # result_path = os.path.join(experiment_folder_path, 'result-data.pkl')
+    # with open(result_path, 'wb') as result_file:
+    #     pickle.dump(all_frames, result_file)
+    #     # TODO(andrei): Also write metainformation, such as full details of
+    #     # all used experiment configurations.
+
+    plot_dir = os.path.join(experiment_folder_path, 'plots')
+    os.mkdir(plot_dir)
     logging.info("Plotting...")
     plot_cross_topic_learning(
         all_frames,
         up_to_votes_per_doc,
         aggregation_iterations,
-        SIM_THRESHOLD)
+        SIM_THRESHOLD,
+        plot_dir)
     logging.info("Finished plotting.")
 
 
 if __name__ == '__main__':
     # TODO(andrei): Allow specifying log level from file.
     logging.basicConfig(level=logging.DEBUG)
-    learning_curves()
+    # learning_curves()
 

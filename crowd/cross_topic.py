@@ -2,6 +2,7 @@
 
 from datetime import datetime
 import logging
+import os
 from typing import Mapping, Union, Sequence
 
 import matplotlib.pyplot as plt
@@ -32,8 +33,10 @@ def compute_cross_topic_learning(experiments: Sequence[ExperimentConfig],
     frames = []
     for cfg in experiments:
         if cfg.nx_graph:
+            logging.info("Sampling from NetworkX graph.")
             graphs_by_topic_id = experiment_data.topic_id_to_nx_graph
         else:
+            logging.info("Sampling from regular graph.")
             graphs_by_topic_id = experiment_data.topic_id_to_graph
 
         frame = cross_topic_learning_curve_frame(
@@ -101,7 +104,7 @@ def cross_topic_learning_curve_frame(graphs_by_topic_id, cfg, judgements,
 # TODO(andrei): Pass data like the similarity threshold in some wrapper, like
 # with the whole graph, for instance.
 def plot_cross_topic_learning(result_data_frames, max_votes, iterations,
-                              similarity_threshold):
+                              similarity_threshold, plot_root):
     """Plots the results of 'compute_cross_topic_learning'.
 
     Saves the plot file to the disk for later inspection.
@@ -113,23 +116,29 @@ def plot_cross_topic_learning(result_data_frames, max_votes, iterations,
     ax.set_xlabel("Mean votes per document", fontsize=14)
     ax.set_ylabel("Accuracy", fontsize=14)
     now = datetime.now()
-    title = "Aggregate cross-topic plot; Date: {}; Git: {}; Graph similarity threshold: {}; Iterations: {}".format(
-        now.strftime("%Y-%m-%d %H:%M"),
-        get_git_revision_hash(),
-        similarity_threshold,
-        iterations)
+    title = "Aggregate cross-topic plot; Date: {} Git: {}\n" \
+            "Graph similarity threshold: {}; Iterations: {}" \
+            .format(now.strftime("%Y-%m-%d %H:%M"),
+                    get_git_revision_hash(),
+                    similarity_threshold,
+                    iterations)
     ax.set_title(title, fontsize=14)
     ax.grid()
     ax.legend(loc='lower right', fontsize=14)
 
     plot_name = "aggregate-{}-{}-{}-{}".format(
+        # TODO(andrei): Extract common utility with nicer timestamps.
         now.strftime("%Y%m%dT%H%M"),
+        # TODO(andrei): Pass this from higher level, since running on e.g.
+        # Euler will NOT have this readily available!
         get_git_revision_hash(),
         similarity_threshold,
         iterations)
     # Save both an easy-to-load PNG, and a lossless EPS.
-    plot_path = 'plots/{}.eps'.format(plot_name)
-    png_plot_path = 'plots/{}.png'.format(plot_name)
+    plot_fname = '{}.eps'.format(plot_name)
+    png_plot_fname = '{}.png'.format(plot_name)
+    plot_path = os.path.join(plot_root, plot_fname)
+    png_plot_path = os.path.join(plot_root, png_plot_fname)
     plt.savefig(plot_path)
     plt.savefig(png_plot_path)
     logging.info("Saved plot to file %s.", plot_path)
