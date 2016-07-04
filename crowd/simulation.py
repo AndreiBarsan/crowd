@@ -217,6 +217,7 @@ def build_learning_curve(
     # TODO(andrei) Make this cleaner and more seamless.
     max_votes = kw['max_votes'] if 'max_votes' in kw else 3
     bud = len(topic_judgements) * max_votes
+    print("Budget being used: {0}".format(bud))
     acc, eval_time_s = evaluate(
         graph,
         topic_judgements,
@@ -226,7 +227,9 @@ def build_learning_curve(
         budget=bud,
         **kw)
 
-    # Note: this result is still indexed by-vote.
+    # Note: this result is still indexed by vote. 'learning_curve_frame' can be
+    # used to resample stuff so that the indexing happens on a mean-votes-per-
+    # -document basis.
     acc = np.array(acc)
     acc_avg = np.mean(acc, axis=0)
     return acc_avg
@@ -253,6 +256,8 @@ def learning_curve_frame(graph,
     # Accuracy as expressed in votes_per_doc space.
     acc_avg = build_learning_curve(graph, aggregation, judgements, ground_truth,
                                    document_sampler, **kw)
+    print("Finished building learning curve. Will resample to {0}.".format(
+        sample_count))
     frame = pd.DataFrame({label: acc_avg})
 
     # This reindexes the learning curves onto a real mean-votes-per-doc
