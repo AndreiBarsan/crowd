@@ -23,6 +23,7 @@ from fabric.contrib.project import rsync_project as rsync
 
 env.use_ssh_config = True
 
+
 # Hint: set your appropriate user and host for Euler in your '~/.ssh/config'!
 @hosts('euler')
 def euler(sub='run', label='euler'):
@@ -51,11 +52,22 @@ def euler(sub='run', label='euler'):
         raise ValueError("Unknown Euler action: {0}".format(sub))
 
 
+@hosts('gce-crowd')
+def gce(sub='run', label='gce'):
+    if sub == 'run':
+        print("Will train TF model remotely Google Compute Engine.")
+        print("Yes, this MAY cost you real $$$.")
+        _run_commodity(label)
+    else:
+        raise ValueError("Unknown GCE action: {0}".format(sub))
+
+
 def _run_euler(run_label):
     print("Will evaluate system on Euler.")
     print("Euler job label: {0}".format(run_label))
 
 
+    # TODO(andrei): Make sure scikit-learn works ok on Euler!
     # TODO(andrei): See if this is necessary!
     put(local_path='./remote/euler_voodoo.sh',
         remote_path=os.path.join('~/deploy', 'euler_voodoo.sh'))
@@ -82,6 +94,18 @@ def _run_euler(run_label):
         run(tf_command, shell_escape=False, shell=False)
 
 
+def _run_commodity(run_label: str) -> None:
+    """Runs the pipeline on commodity hardware with no LSF job queueing."""
+    _sync_data_and_code()
+
+    with cd('crowd'):
+        ts = '$(date +%Y%m%dT%H%M%S)'
+        tf_command = ('t=' + ts + ' && mkdir $t && cd $t &&'
+                      'python ' + _run_experiment(run_label))
+        _in_screen(tf_command, 'tensorflow_screen', shell_escape=False,
+                   shell=False)
+
+
 def _run_experiment(run_label: str) -> str:
     """This is command for starting the accuracy evaluation pipeline.
 
@@ -94,22 +118,23 @@ def _run_experiment(run_label: str) -> str:
 
 
 def _sync_data_and_code():
-    # TODO(andrei): '--progress' flag for rsync or pipe through 'pv'.
-    run('mkdir -p ~/deploy/data/preprocessing')
+    run('mkdir -p ~/crowd/data')
 
     # Ensure we have a trailing slash for rsync to work as intended.
-    folder = os.path.join('data', 'preprocessing') + '/'
+    folder = 'data/'
     # 'os.path.join' does no tilde expansion, and this is what we want.
-    remote_folder = os.path.join('~/deploy', folder)
+    remote_folder = os.path.join('~/crowd', folder)
 
     # This syncs the data (needs to be preprocessed in advance).
-    rsync(local_dir=folder, remote_dir=remote_folder, exclude=['*.txt'])
+    rsync(local_dir=folder, remote_dir=remote_folder,
+          extra_opts='--progress') #, exclude=['*.txt'])
 
-    put(local_path='./train_model.py',
-        remote_path=os.path.join('~/deploy', 'train_model.py'))
+    # This syncs the entry point script.
+    put(local_path='./compute_learning_curves.py',
+        remote_path=os.path.join('~/crowd', 'compute_learning_curves.py'))
 
-    # This syncs the model code.
-    rsync(local_dir='model', remote_dir='deploy')
+    # This syncs the core code.
+    rsync(local_dir='crowd', remote_dir='crowd')
 
 
 # def latest_run_id():
@@ -142,7 +167,7 @@ def _in_screen(cmd, screen_name, **kw):
     run(screen, pty=False, **kw)
 
 
-@hosts('euler')
+@hosts('gce-crowd')
 def host_type():
     """An example of a Fabric command."""
 

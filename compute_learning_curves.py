@@ -3,11 +3,11 @@
 
 import logging
 import os
-import pickle
 import random
 from typing import Sequence, Mapping
 
 import click
+import dill
 import numpy as np
 
 from crowd.aggregation import *
@@ -94,7 +94,7 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
         if os.path.exists(cache_path):
             logging.info("Loading cached graphs from %s.", cache_path)
             with open(cache_path, 'rb') as cache_file:
-                pickled_experiment_data = pickle.load(cache_file)
+                pickled_experiment_data = dill.load(cache_file)
                 assert isinstance(pickled_experiment_data, ExperimentData)
                 return pickled_experiment_data
         else:
@@ -126,7 +126,7 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
     if use_cache:
         with open(cache_path, 'wb') as cache_file:
             logging.info("Caching experiment data...")
-            pickle.dump(experiment_data, cache_file)
+            dill.dump(experiment_data, cache_file)
             logging.info("Finished caching experiment data.")
 
     return experiment_data
@@ -147,7 +147,7 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
 def learning_curves(label, aggregation_iterations, result_pickle_root):
     # TODO(andrei): Use label!
     cross_topic_experiments = [
-        # experimental_IC_config,
+        experimental_IC_config,
         mv_config,
         mv_nn_config,
         mev_1_config,
@@ -161,11 +161,15 @@ def learning_curves(label, aggregation_iterations, result_pickle_root):
                  len(cross_topic_experiments))
 
     logging.info("Loading experiment data...")
+    # TODO(andrei): Figure out why enabling caching sometimes causes strange
+    # issues with the graph. Are we still trying to read some original data
+    # files after loading the pickle and screwing up because of IDs and ordering
+    # and such?
     experiment_data = load_experiment_data(use_cache=False)
     logging.info("Finished loading experiment data.")
 
     up_to_votes_per_doc = 1
-    topic_limit = 3
+    topic_limit = -1
 
     logging.info("Kicking off computation...")
     all_frames = compute_cross_topic_learning(
@@ -185,12 +189,11 @@ def learning_curves(label, aggregation_iterations, result_pickle_root):
     experiment_folder_path = os.path.join(result_pickle_root, experiment_folder_name)
     os.mkdir(experiment_folder_path)
 
-    # TODO(andrei): Re-enable after fixing lambdas OR using dill.
-    # result_path = os.path.join(experiment_folder_path, 'result-data.pkl')
-    # with open(result_path, 'wb') as result_file:
-    #     pickle.dump(all_frames, result_file)
-    #     # TODO(andrei): Also write metainformation, such as full details of
-    #     # all used experiment configurations.
+    result_path = os.path.join(experiment_folder_path, 'result-data.pkl')
+    with open(result_path, 'wb') as result_file:
+        dill.dump(all_frames, result_file)
+        # TODO(andrei): Also write metainformation, such as full details of
+        # all used experiment configurations.
 
     plot_dir = os.path.join(experiment_folder_path, 'plots')
     os.mkdir(plot_dir)
@@ -207,5 +210,5 @@ def learning_curves(label, aggregation_iterations, result_pickle_root):
 if __name__ == '__main__':
     # TODO(andrei): Allow specifying log level from file.
     logging.basicConfig(level=logging.DEBUG)
-    # learning_curves()
+    learning_curves()
 
