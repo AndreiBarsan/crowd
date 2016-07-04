@@ -73,7 +73,9 @@ def load_experiment_data() -> ExperimentData:
     id_topic_info = load_topic_metadata()
 
     cache_dir = os.path.join('.', 'cache')
-    if not os.path.exists()
+    if not os.path.exists(cache_dir):
+        os.mkdir(cache_dir)
+
     cache_fname = 'exp-data-{0}-{1}.pkl'.format(
         SIM_THRESHOLD,
         'discard-empty' if DISCARD_EMPTY_NODES else 'no-discard-empty')

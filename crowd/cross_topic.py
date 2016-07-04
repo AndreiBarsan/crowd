@@ -127,9 +127,13 @@ def plot_cross_topic_learning(result_data_frames, max_votes, iterations,
         get_git_revision_hash(),
         similarity_threshold,
         iterations)
-    plot_path = 'plots/{}.svg'.format(plot_name)
+    # Save both an easy-to-load PNG, and a lossless EPS.
+    plot_path = 'plots/{}.eps'.format(plot_name)
+    png_plot_path = 'plots/{}.png'.format(plot_name)
     plt.savefig(plot_path)
+    plt.savefig(png_plot_path)
     logging.info("Saved plot to file %s.", plot_path)
+    logging.info("Saved PNG plot to file %s.", png_plot_path)
     return ax
 
 

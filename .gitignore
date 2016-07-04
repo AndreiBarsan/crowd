@@ -74,3 +74,4 @@ data/
 out/
 .idea/
 plots/
+cache/
