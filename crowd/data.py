@@ -1,13 +1,15 @@
 """Data holder classes and utility functions for the project."""
 
 import io
-from typing import Mapping, Sequence
+import logging
 
-from .config import TEST_LABEL_FILE_SHARED, TEST_LABEL_FILE_TEAMS
+from typing import Mapping, Sequence, List, Tuple
+
+from crowd.config import TEST_LABEL_FILE_SHARED, TEST_LABEL_FILE_TEAMS
 
 
 class JudgementRecord(object):
-    """ Judgement record submitted in the 2011 Crowdsourcing Track.
+    """Judgement record submitted in the 2011 Crowdsourcing Track.
 
     Attributes:
         label_type: Additional label metadata (enum).
@@ -52,6 +54,9 @@ class JudgementRecord(object):
 
 
 class WorkerLabel(object):
+    from warnings import warn
+    warn("Using deprecated old worker labels!")
+
     def __init__(self, table_row):
         attributes = table_row.split()
         topic_id, hit_id, worker_id, document_id, nist_label, worker_label = attributes
@@ -86,7 +91,7 @@ class ExpertLabel(object):
     def is_relevant(self):
         raise ValueError("Don't use this, it's borked (!is_relevant does not "
                          "imply explicit non-relevance, since it's not a binary "
-                         "relation, it's trinary since docs can have "
+                         "relation: it's ternary since docs can have "
                          "unestablished relevance).")
         return self.label > 0
 
@@ -95,16 +100,16 @@ class ExpertLabel(object):
         return "%s:%s:%s" % (self.topic_id, self.document_id, relevance)
 
 
-def read_judgement_labels(file_name):
+def read_judgement_labels(file_name: str) -> List[JudgementRecord]:
     with io.open(file_name, 'r') as f:
         return [JudgementRecord(line[:-1]) for line in f]
 
 
-def read_useful_judgement_labels(file_name):
+def read_useful_judgement_labels(file_name: str) -> List[JudgementRecord]:
     return [l for l in read_judgement_labels(file_name) if l.is_useful()]
 
 
-def read_expert_labels(file_name, header=False, sep=None):
+def read_expert_labels(file_name, header=False, sep=None) -> List[ExpertLabel]:
     with io.open(file_name, 'r') as f:
         if header:
             # Skip the header
@@ -112,44 +117,46 @@ def read_expert_labels(file_name, header=False, sep=None):
         return [ExpertLabel(line.split(sep)) for line in f]
 
 
-def read_worker_labels(file_name):
+def read_worker_labels(file_name: str) -> List[WorkerLabel]:
+    logging.warning("Using old worker labels!")
     with io.open(file_name, 'r') as f:
         return [WorkerLabel(line) for line in f]
 
 
-def read_all_test_labels():
+def read_ground_truth():
     """Reads the 2011 test label data files, which are used as the ground truth
     in our evaluation."""
     return read_expert_labels(TEST_LABEL_FILE_SHARED, header=True, sep=',') + \
         read_expert_labels(TEST_LABEL_FILE_TEAMS, header=True, sep=',')
 
 
-def get_all_relevant(ground_truth_data):
-    """Returns all relevant and non-relevant documents in the given ground
-    truth data.
+def get_known_labels(ground_truth_data: Sequence[ExpertLabel]) -> Tuple[Sequence[ExpertLabel], Sequence[ExpertLabel]]:
+    """Returns all relevant and non-relevant documents in the ground truth data.
 
+    Skips judgements in the ground truth where the label is negative, i.e.
+    missing.
     """
 
     relevant_documents = {j.document_id for j in ground_truth_data if j.label > 0}
-    non_relevant_documents = {j.document_id for j in ground_truth_data if j.label == 0}
+    non_relevant_documents = {j.document_id for j in ground_truth_data
+                              if j.label == 0}
 
     return relevant_documents, non_relevant_documents
 
 
-def get_relevant(topic_id, ground_truth_data):
+def get_relevant(topic_id: str, ground_truth_data: Sequence[ExpertLabel]) -> Tuple[Sequence[ExpertLabel], Sequence[ExpertLabel]]:
     """ Returns a set of relevant and a set of non-relevant document IDs
     from the specified topic.
-
     """
     topic_ground_truth_data = [j for j in ground_truth_data
                                if j.topic_id == topic_id]
     # TODO(andrei) Fix issue with 'is_relevant()' function for labels == -1.
-    return get_all_relevant(topic_ground_truth_data)
+    return get_known_labels(topic_ground_truth_data)
 
 
-def get_all_judgements_by_doc_id(judgements):
+def get_all_judgements_by_doc_id(turk_judgements: Sequence[JudgementRecord]):
     judgements_by_doc_id = {}
-    for j in judgements:
+    for j in turk_judgements:
         if j.doc_id not in judgements_by_doc_id:
             judgements_by_doc_id[j.doc_id] = []
 

@@ -103,9 +103,8 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
     else:
         logging.info("Not using caching.")
 
-    # TODO(andrei): Better names for these functions!
     turk_judgements = read_useful_judgement_labels(JUDGEMENT_FILE)
-    ground_truth = read_all_test_labels()
+    ground_truth = read_ground_truth()
 
     # TODO-LOW(andrei): Consider parallelizing this somehow.
     id_topic_nx_graph = {topic_id: build_nx_document_graph(

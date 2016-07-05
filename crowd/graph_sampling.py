@@ -288,7 +288,7 @@ def compare_sampling(tid, sim_threshold, discard_empty_nodes=True):
 
     id_topic_info = load_topic_metadata()
     judgements = read_useful_judgement_labels(JUDGEMENT_FILE)
-    test_data = read_all_test_labels()
+    test_data = read_ground_truth()
 
     print(
         "Comparing least-votes and graph-based sampling for topic: {} (ID#{})".format(
