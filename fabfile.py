@@ -23,6 +23,9 @@ from fabric.contrib.project import rsync_project as rsync
 
 env.use_ssh_config = True
 
+# TODO(andrei): Compute dynamically.
+work_dir = '/cluster/scratch/{0}/crowd'.format('barsana')
+
 
 # Hint: set your appropriate user and host for Euler in your '~/.ssh/config'!
 @hosts('euler')
@@ -66,15 +69,12 @@ def _run_euler(run_label):
     print("Will evaluate system on Euler.")
     print("Euler job label: {0}".format(run_label))
 
-
-    # TODO(andrei): Make sure scikit-learn works ok on Euler!
-    # TODO(andrei): See if this is necessary!
     put(local_path='./remote/euler_voodoo.sh',
-        remote_path=os.path.join('~/deploy', 'euler_voodoo.sh'))
+        remote_path=os.path.join(work_dir, 'euler_voodoo.sh'))
 
     _sync_data_and_code()
 
-    with cd('crowd'):
+    with cd(work_dir):
         # TODO(andrei): Run on scratch instead of in '~', since the user root
         # on Euler only has a quota of 20Gb but scratch is fuckhuge.
         # TODO(andrei): Warn when writing to scratch, since files in scratch get
@@ -83,13 +83,17 @@ def _run_euler(run_label):
         ts = '$(date +%Y%m%dT%H%M%S)'
         # Hint: Replace the "heavy" 'train_model' call with 'tensor_hello' if
         # you just want to test things out.
-        tf_command = ('t=' + ts + ' && mkdir $t && cd $t &&'
-                      ' source ../euler_voodoo.sh &&'
+
+        # 't=' + ts + ' && mkdir $t && cd $t &&'
+        tf_command = (
+                      ' source euler_voodoo.sh &&'
                       ' bsub -n 48 -W 4:00'
                       # These flags tell 'bsub' to send an email to the
                       # submitter when the job starts, and when it finishes.
                       ' -B -N'
-                      ' LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/ext/lib" "$HOME"/ext/lib/ld-2.23.so "$HOME"/.venv/bin/python3'
+                      # ' LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/ext/lib" "$HOME"/ext/lib/ld-2.23.so "$HOME"/.venv/bin/python3'
+                        # Note: doing weird LD_LIBRARY_PATH overrides can actually mess up matplotlib!
+                        ' "$HOME"/.venv/bin/python3'
                       + _run_experiment(run_label))
         run(tf_command, shell_escape=False, shell=False)
 
@@ -98,7 +102,7 @@ def _run_commodity(run_label: str) -> None:
     """Runs the pipeline on commodity hardware with no LSF job queueing."""
     _sync_data_and_code()
 
-    with cd('crowd'):
+    with cd(work_dir):
         ts = '$(date +%Y%m%dT%H%M%S)'
         tf_command = ('t=' + ts + ' && mkdir $t && cd $t &&'
                       'python ' + _run_experiment(run_label))
@@ -113,28 +117,30 @@ def _run_experiment(run_label: str) -> str:
     to LFS using 'bsub' on Euler.
     """
     # TODO(andrei): Pass these all these parameters as arguments to fabric.
-    return (' ../compute_learning_curves.py'
+    return (' compute_learning_curves.py'
+            ' --aggregation_iterations 30'
             ' --label "' + run_label + '"')
 
 
 def _sync_data_and_code():
-    run('mkdir -p ~/crowd/data')
+    run('mkdir -p {0}/data'.format(work_dir))
 
     # Ensure we have a trailing slash for rsync to work as intended.
     folder = 'data/'
     # 'os.path.join' does no tilde expansion, and this is what we want.
-    remote_folder = os.path.join('~/crowd', folder)
+    remote_folder = os.path.join(work_dir, folder)
 
     # This syncs the data (needs to be preprocessed in advance).
-    rsync(local_dir=folder, remote_dir=remote_folder,
-          extra_opts='--progress') #, exclude=['*.txt'])
+    # XXX: re-enable me!!!
+    # rsync(local_dir=folder, remote_dir=remote_folder,
+    #       extra_opts='--progress') #, exclude=['*.txt'])
 
     # This syncs the entry point script.
     put(local_path='./compute_learning_curves.py',
-        remote_path=os.path.join('~/crowd', 'compute_learning_curves.py'))
+        remote_path=os.path.join(work_dir, 'compute_learning_curves.py'))
 
     # This syncs the core code.
-    rsync(local_dir='crowd', remote_dir='crowd')
+    rsync(local_dir='crowd/', remote_dir=work_dir + '/crowd')
 
 
 # def latest_run_id():

@@ -55,7 +55,7 @@ class JudgementRecord(object):
 
 class WorkerLabel(object):
     from warnings import warn
-    warn("Using deprecated old worker labels!")
+    warn("Using deprecated old worker labels!", category=DeprecationWarning)
 
     def __init__(self, table_row):
         attributes = table_row.split()

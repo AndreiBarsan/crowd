@@ -39,6 +39,8 @@ def compute_cross_topic_learning(experiments: Sequence[ExperimentConfig],
             logging.info("Sampling from regular graph.")
             graphs_by_topic_id = experiment_data.topic_id_to_graph
 
+        new_kw = kw.copy()
+        new_kw.update(cfg.params)
         frame = cross_topic_learning_curve_frame(
             graphs_by_topic_id,
             cfg,
@@ -46,7 +48,7 @@ def compute_cross_topic_learning(experiments: Sequence[ExperimentConfig],
             experiment_data.ground_truth,
             iterations=iterations,
             max_votes=max_votes,
-            **cfg.params, **kw)
+            **new_kw)
         frames.append((cfg, frame))
 
     return frames

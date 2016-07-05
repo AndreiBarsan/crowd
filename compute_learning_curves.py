@@ -57,7 +57,7 @@ experimental_IC_config = ExperimentConfig(aggregate_mev_nx,
 # notebook, led to seemingly better results.
 # This is a very important parameter. Lower values tend to add LOTS of edges,
 # which can significantly slow down the graph sampling process.
-SIM_THRESHOLD = 0.65
+SIM_THRESHOLD = 0.75
 DISCARD_EMPTY_NODES = True
 
 

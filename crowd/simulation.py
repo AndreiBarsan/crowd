@@ -2,9 +2,8 @@
 
 # pylint: disable=missing-docstring, superfluous-parens
 
-from abc import ABC, abstractmethod
 import random
-from typing import Mapping, Sequence, Tuple, Callable, Union
+from typing import Mapping, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -21,7 +20,8 @@ DEFAULT_BUDGET = 250
 N_CORES = -1
 
 
-class DocumentSampler(ABC):
+# TODO(andrei): Python 3.3-compatible ABC!
+class DocumentSampler(object):
     """ABC for components which sample a document from the existing pool.
 
     These modules can either just randomly sample, or use some smart criteria
@@ -30,7 +30,6 @@ class DocumentSampler(ABC):
     def __init__(self):
         pass
 
-    @abstractmethod
     def sample(self, existing_votes, available_topic_judgements):
         """Selects a document based on the existing votes."""
         pass
