@@ -57,7 +57,7 @@ experimental_IC_config = ExperimentConfig(aggregate_mev_nx,
 # notebook, led to seemingly better results.
 # This is a very important parameter. Lower values tend to add LOTS of edges,
 # which can significantly slow down the graph sampling process.
-SIM_THRESHOLD = 0.75
+SIM_THRESHOLD = 0.65
 DISCARD_EMPTY_NODES = True
 
 
@@ -180,7 +180,7 @@ def learning_curves(label, aggregation_iterations, result_pickle_root):
         topic_limit=topic_limit)
     logging.info("Completed computation.")
 
-    # TODO(andrei): Add option to simple re-plot old pickle.
+    # TODO-LOW(andrei): Add option to simple re-plot old pickle.
 
     now = datetime.now()
     timestamp = int(now.timestamp())

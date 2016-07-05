@@ -12,10 +12,10 @@
 
 # July
 ## Monday, July 4th
- * Extract fully modular aggregate plot gen into own utility. Use gflags.
- * Short test run on Euler.
 ### DONE
- n/a
+ * Extract fully modular aggregate plot gen into own utility. Use gflags.
+ * Ran entire simulation locally (~3h); got decent numbers; ETH's VPN was down
+   on RDS @ home for some reason...
 
 ## Tuesday, July 5th
  * Run serious job on Euler aggregating all topics.
@@ -29,6 +29,7 @@
 ## Wednesday, July 6th
  * Visa appointment
  * Busy schedule, probably no time to work
+ * Short test run on Euler.
 ### DONE
  n/a
 
