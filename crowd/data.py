@@ -5,7 +5,7 @@ import logging
 
 from typing import Mapping, Sequence, List, Tuple
 
-from crowd.config import TEST_LABEL_FILE_SHARED, TEST_LABEL_FILE_TEAMS
+from crowd.config import *
 
 
 class JudgementRecord(object):
@@ -105,7 +105,7 @@ def read_judgement_labels(file_name: str) -> List[JudgementRecord]:
         return [JudgementRecord(line[:-1]) for line in f]
 
 
-def read_useful_judgement_labels(file_name: str) -> List[JudgementRecord]:
+def read_useful_judgement_labels(file_name: str=JUDGEMENT_FILE) -> List[JudgementRecord]:
     return [l for l in read_judgement_labels(file_name) if l.is_useful()]
 
 

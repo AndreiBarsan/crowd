@@ -26,6 +26,7 @@ np.random.seed(0x7788)
 # Various experiment configs from the original comparison notebook.
 mv_config = ExperimentConfig(aggregate_MV, "LV-MV", {})
 mv_nn_config = ExperimentConfig(aggregate_MV_NN, "LV-MVNN(0.5)", {'rho_s': 0.5})
+mv_nn_075_config = ExperimentConfig(aggregate_MV_NN, "LV-MVNN(0.75)", {'rho_s': 0.75})
 mv_nn_09_config = ExperimentConfig(aggregate_MV_NN, "LV-MVNN(0.9)", {'rho_s': 0.9})
 
 mvpp_graph_opts={'marker': 'x', 'markevery': 15}
@@ -143,12 +144,15 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
               default='experiments/',
               help="Folder where to pickle experiment results for later"
                    " inspection.")
-def learning_curves(label, aggregation_iterations, result_pickle_root):
-    # TODO(andrei): Use label!
+@click.option('--git', default="NO-GIT", help="Current git revision hash."
+                                              " Useful for reproducibility.")
+def learning_curves(label, aggregation_iterations, result_pickle_root, git):
+    # TODO(andrei): Use label and pass git revision explicitly!
     cross_topic_experiments = [
         experimental_IC_config,
         mv_config,
         mv_nn_config,
+        mv_nn_075_config,
         mev_1_config,
         mev_2_config,
         mev_3_config]

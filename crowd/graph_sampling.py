@@ -1,6 +1,7 @@
 """Code for document selection using information diffusion."""
 
 from datetime import datetime
+import logging
 import heapq
 import random
 
@@ -10,16 +11,24 @@ import numpy as np
 
 from crowd.aggregation import aggregate_mev_nx
 from crowd.config import *
-from crowd.graph import build_nx_document_graph
+from crowd.graph import build_nx_document_graph, NxDocumentNode
 from crowd.simulation import DocumentSampler, evaluate, LeastVotesSampler
 from crowd.data import *
 from crowd.topic import load_topic_metadata
 from crowd.util import get_git_revision_hash
 
 
-def sample_edges(graph, seed_set):
-    # Samples every edge in the graph with the probability = similarity.
-    # Return the set of reachable nodes given the seed set and the edges we sampled.
+def sample_edges(graph: nx.Graph, seed_set: Sequence[NxDocumentNode]) -> Sequence[NxDocumentNode]:
+    """
+    Samples every edge in the graph with the probability = similarity.
+
+    Args:
+        graph: The graph on which we should operate.
+        seed_set: A set of nodes which are 'active' at the beginning.
+
+    Returns:
+        The set of reachable nodes given the seed set and the edges we sampled.
+    """
 
     sampled = nx.Graph(graph)
     sampled.remove_edges_from(sampled.edges())
@@ -98,7 +107,8 @@ def build_seed_set(graph, budget, iteration_count):
 
 
 def compute_best_heap(graph, current_seed_set, prev_spread, iteration_count):
-    """Similar to 'pick_next_best', but returns a priority queue of all candidates."""
+    """Similar to 'pick_next_best', but returns a priority queue of all
+    candidates."""
 
     spread_node_heap = []
     for node in graph.nodes():
@@ -134,7 +144,8 @@ def pick_next_best_lazy(graph, current_seed_set, iteration_count,
         # Heap not enough for any sensible lazy greediness.
         return compute_best_heap(graph, current_seed_set, 0, iteration_count)
 
-    # The first value in the previous best heap has already been added to the seed set.
+    # The first value in the previous best heap has already been added to the
+    # seed set.
     best, second_best = heapq.nsmallest(2, previous_best_heap)
     # prev_delta, prev_spread, prev_added_node = prev
     best_delta, best_spread, best_node = best
@@ -174,6 +185,7 @@ def pick_next_best_lazy(graph, current_seed_set, iteration_count,
 
 
 def build_seed_set_lg(graph, budget, iteration_count):
+    """Used for debugging graph sampling."""
     best_heap = []
     seed_set = set()
     best_spread_delta = 0
@@ -185,12 +197,12 @@ def build_seed_set_lg(graph, budget, iteration_count):
         best_heap = pick_next_best_lazy(graph, seed_set, iteration_count,
                                         best_heap, prev_spread, stats)
         best_spread_delta, best_spread, best_node = heapq.heappop(best_heap)
-        print("Budget: {}/{}, Spread: {:.2f}".format(index + 1, budget,
-                                                     best_spread))
+        logging.debug("Budget: {}/{}, Spread: {:.2f}".format(index + 1,
+                                                             budget,
+                                                             best_spread))
         seed_set.add(best_node)
 
-    print("Stats: ", stats)
-    return seed_set
+    return seed_set, stats, best_spread
 
 
 class GraphSpreadSampler(DocumentSampler):
@@ -245,9 +257,9 @@ class LazyGreedyGraphSpreadSampler(DocumentSampler):
             self.best_heap,
             prev_spread,
             # Limit the nodes we're allowed to sample to the ones for which
-            # we have votes, without getting rid of nodes with no info altogether,
-            # as they may be the way towards other interesting nodes in our information
-            # diffusion model.
+            # we have votes, without getting rid of nodes with no info
+            # altogether, as they may be the way towards other interesting
+            # nodes in our information diffusion model.
             # TODO(andrei): Re-enable this once you speed the code up.
             # available_topic_judgement.keys(),
             self.stats)
@@ -258,33 +270,22 @@ class LazyGreedyGraphSpreadSampler(DocumentSampler):
 
         if self.best_node.document_id not in available_topic_judgement:
             print(available_topic_judgement)
-            raise ValueError("Sanity check failed.")
+            raise ValueError("Sanity check failed: tried to sample an"
+                             " unavailable document ID.")
 
         return self.best_node.document_id
 
-# TODO(andrei): Improve modularization, and use more specific name for 'evaluate' 'iterations' arg.
-
-def lgss_factory(graph, iteration_count):
-    """Ensures that each worker in 'evaluate' has its own copy of the sampler (which is stateful!)."""
-
-    # TODO(andrei): No longer use this!
-
-    def res():
-        return LazyGreedyGraphSpreadSampler(graph,
-                                            iteration_count=iteration_count)
-
-    return res
-
 
 def lgss_graph_factory(iteration_count):
-    """Same as above, but doesn't need the graph from the beginning."""
+    """Proxy for ensuring that when computing things in parallel, every worker
+    has its own sampler. This is necessary as these samplers are stateful."""
     def res(graph):
         return LazyGreedyGraphSpreadSampler(graph, iteration_count=iteration_count)
     return res
 
 
 def compare_sampling(tid, sim_threshold, discard_empty_nodes=True):
-    # TODO(andrei): Time to move to a regular python project.
+    # TODO(andrei): Do we still need this?
 
     id_topic_info = load_topic_metadata()
     judgements = read_useful_judgement_labels(JUDGEMENT_FILE)
