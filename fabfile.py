@@ -11,7 +11,8 @@ Make sure that 'env.hosts' points to wherever you want to train your model, and
 that the remote host has the required dependencies installed.
 
 Examples:
-    TODO(andrei): Some examples.
+    `fab euler` Syncs your data to Euler and kicks off an experiment.
+    `fab euler:status` Shows the status of your Euler jobs.
 """
 
 from __future__ import with_statement
@@ -20,6 +21,8 @@ import os
 
 from fabric.api import *
 from fabric.contrib.project import rsync_project as rsync
+
+from crowd.util import get_git_revision_hash
 
 env.use_ssh_config = True
 
@@ -68,6 +71,8 @@ def gce(sub='run', label='gce'):
 def _run_euler(run_label):
     print("Will evaluate system on Euler.")
     print("Euler job label: {0}".format(run_label))
+    print("Working in your scratch folder, files unused for 15 days are deleted"
+          " automatically!")
 
     put(local_path='./remote/euler_voodoo.sh',
         remote_path=os.path.join(work_dir, 'euler_voodoo.sh'))
@@ -75,27 +80,16 @@ def _run_euler(run_label):
     _sync_data_and_code()
 
     with cd(work_dir):
-        # TODO(andrei): Run on scratch instead of in '~', since the user root
-        # on Euler only has a quota of 20Gb but scratch is fuckhuge.
-        # TODO(andrei): Warn when writing to scratch, since files in scratch get
-        # cleared out every 15 days.
-        # Creates a timestamped folder in which to run.
-        ts = '$(date +%Y%m%dT%H%M%S)'
-        # Hint: Replace the "heavy" 'train_model' call with 'tensor_hello' if
-        # you just want to test things out.
-
-        # 't=' + ts + ' && mkdir $t && cd $t &&'
-        tf_command = (
-                      ' source euler_voodoo.sh &&'
-                      ' bsub -n 48 -W 4:00'
-                      # These flags tell 'bsub' to send an email to the
-                      # submitter when the job starts, and when it finishes.
-                      ' -B -N'
-                      # ' LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/ext/lib" "$HOME"/ext/lib/ld-2.23.so "$HOME"/.venv/bin/python3'
-                        # Note: doing weird LD_LIBRARY_PATH overrides can actually mess up matplotlib!
-                        ' "$HOME"/.venv/bin/python3'
-                      + _run_experiment(run_label))
-        run(tf_command, shell_escape=False, shell=False)
+        # TODO(andrei): Consider parallelizing better. If using e.g.
+        # 30 iterations, the toolkit will only scale up to that many CPUs.
+        # This wastes 18 of the 48 available Euler CPUs.
+        command = ('source euler_voodoo.sh &&'
+                   ' bsub -n 48 -W 4:00'
+                   # These flags tell 'bsub' to send an email to the
+                   # submitter when the job starts, and when it finishes.
+                   ' -B -N'
+                   ' "$HOME"/.venv/bin/python3 ' + _run_experiment(run_label))
+        run(command, shell_escape=False, shell=False)
 
 
 def _run_commodity(run_label: str) -> None:
@@ -103,37 +97,37 @@ def _run_commodity(run_label: str) -> None:
     _sync_data_and_code()
 
     with cd(work_dir):
-        ts = '$(date +%Y%m%dT%H%M%S)'
-        tf_command = ('t=' + ts + ' && mkdir $t && cd $t &&'
-                      'python ' + _run_experiment(run_label))
-        _in_screen(tf_command, 'tensorflow_screen', shell_escape=False,
-                   shell=False)
+        command = 'python3 ' + _run_experiment(run_label)
+        _in_screen(command, 'crowd_screen', shell_escape=False, shell=False)
 
 
-def _run_experiment(run_label: str) -> str:
+def _run_experiment(run_label: str,
+                    aggregation_iterations=48,
+                    git_hash=get_git_revision_hash()) -> str:
     """This is command for starting the accuracy evaluation pipeline.
 
     It is called inside a screen right away when running on AWS, and submitted
     to LFS using 'bsub' on Euler.
     """
-    # TODO(andrei): Pass these all these parameters as arguments to fabric.
-    return (' compute_learning_curves.py'
-            ' --aggregation_iterations 30'
-            ' --label "' + run_label + '"')
+    # This value is set so that it's large enough to achieve reasonable
+    # statistical confidence, while also matching the upper CPU limit on Euler.
+    return ('compute_learning_curves.py'
+            ' --aggregation_iterations {0}'
+            ' --label "{1}"'
+            ' --git {2}').format(aggregation_iterations, run_label, git_hash)
 
 
-def _sync_data_and_code():
-    run('mkdir -p {0}/data'.format(work_dir))
-
+def _sync_data_and_code() -> None:
     # Ensure we have a trailing slash for rsync to work as intended.
-    folder = 'data/'
+    data_folder = 'data/'
+    run('mkdir -p {0}/{1}'.format(work_dir, data_folder))
+
     # 'os.path.join' does no tilde expansion, and this is what we want.
-    remote_folder = os.path.join(work_dir, folder)
+    remote_folder = os.path.join(work_dir, data_folder)
 
     # This syncs the data (needs to be preprocessed in advance).
-    # XXX: re-enable me!!!
-    # rsync(local_dir=folder, remote_dir=remote_folder,
-    #       extra_opts='--progress') #, exclude=['*.txt'])
+    rsync(local_dir=data_folder, remote_dir=remote_folder,
+          extra_opts='--progress')
 
     # This syncs the entry point script.
     put(local_path='./compute_learning_curves.py',
@@ -163,7 +157,7 @@ def _sync_data_and_code():
 #     print("Downloaded the pipeline results.")
 
 
-def _in_screen(cmd, screen_name, **kw):
+def _in_screen(cmd: str, screen_name: str, **kw) -> None:
     """Runs the specified command inside a persistent screen.
 
     The screen persists into a regular 'bash' after the command completes.
@@ -174,7 +168,7 @@ def _in_screen(cmd, screen_name, **kw):
 
 
 @hosts('gce-crowd')
-def host_type():
+def host_type() -> None:
     """An example of a Fabric command."""
 
     # This runs on your machine.
