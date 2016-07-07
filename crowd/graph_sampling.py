@@ -133,9 +133,34 @@ def compute_best_heap(graph, current_seed_set, prev_spread, iteration_count):
     return spread_node_heap
 
 
+# TODO(andrei): The algorithm in its early stages is slowed down by cliques
+# in the graph => bad lazy greedy performance. Write about this in the
+# report.
+# The same happens in the later stages: there we are only sampling
+# unconnected nodes (1-cliques).
 def pick_next_best_lazy(graph, current_seed_set, iteration_count,
-                        previous_best_heap, prev_spread, stats):
-    # TODO(andrei): Better docs once interface stable.
+                        previous_best_heap, prev_spread, stats, **kw):
+    """
+    Args:
+        graph: The graph from which to sample.
+        current_seed_set: The documents which are "already picked" when the
+                          algorithm starts.
+        iteration_count: The number of times to repeat the sampling process
+                         inside the graph.
+        previous_best_heap: The heap computed at a previous step, or an empty
+                            sequence.
+        prev_spread: Information spread at the previous time step.
+        stats: A dictionary to which various stats get written.
+
+    Keyword Args:
+        epsilon: Trick to make many more lazy greedy "hits" happen, at a
+                 very small cost to the total accuracy. Applies this as a
+                 "penalty" to the second-best score so that it's "easier" for
+                 the lazy option to be picked.
+
+    Returns:
+        The new heap, as a Python list.
+    """
     # TODO(andrei): Re-add safe sample set.
     # safe_sample_set: The IDs we are actually allowed to try out, since we can't pick
     # any node because many don't have any votes to sample from in our simulation!!!
@@ -144,6 +169,8 @@ def pick_next_best_lazy(graph, current_seed_set, iteration_count,
         # Heap not enough for any sensible lazy greediness.
         return compute_best_heap(graph, current_seed_set, 0, iteration_count)
 
+    epsilon = kw.get('epsilon', 0.5)
+
     # The first value in the previous best heap has already been added to the
     # seed set.
     best, second_best = heapq.nsmallest(2, previous_best_heap)
@@ -151,37 +178,32 @@ def pick_next_best_lazy(graph, current_seed_set, iteration_count,
     best_delta, best_spread, best_node = best
     second_best_delta, second_best_spread, second_best_node = second_best
 
-    # print("Second best delta: {}".format(second_best_delta))
-
-    # print("Best node in heap now: {}".format(best_node))
-    # print("Second node in heap now: {}".format(second_best_node))
-    # print("Top node snapshot: {}".format([str(e[2]) + " " + str(e[1]) for e in heapq.nsmallest(10, previous_best_heap)]))
-
-    # assert prev_added_node in current_seed_set
-
     recomputed_best_score = simulate_spread(graph,
                                             current_seed_set | {best_node},
                                             iteration_count)
     # Note: prev_spread is negative!
-    # TODO(andrei): The algorithm in its early stages is slowed down by cliques in the graph => bad lazy greedy performance. Write about this in the report.
-    # The same happens in the later stages: there we are only sampling unconnected nodes (1-cliques).
     recomputed_best_delta = -(recomputed_best_score + prev_spread)
-    # print("Recomputed best delta: {} vs second_best: {}".format(-recomputed_best_delta, -second_best_delta))
-    # print("This delta used to be: {}".format(-best_delta))
 
-    EPSILON = 0.5
-    if recomputed_best_delta <= second_best_delta + EPSILON:
+    if recomputed_best_delta <= second_best_delta + epsilon:
+        print("Recomputed best delta <= {0}".format(second_best_delta + epsilon))
+        print("Next node should be: {0}".format(best_node))
+        print("Second after that:   {0}".format(second_best_node))
         stats['hit'] += 1
-        # We succeeded in being lazy! Update the delta and score for the element.
-        # Note: heapreplace returns the smallest!
-        _ = heapq.heapreplace(previous_best_heap, (
-        recomputed_best_delta, -recomputed_best_score, best_node))
+        # We succeeded in being lazy! Update the delta and score for the best
+        # element. Note: heapreplace returns the smallest!
+        _ = heapq.heapreplace(
+            previous_best_heap,
+            # The '- EPSILON' term ensures we actually pick this element when
+            # popping from the heap.
+            (recomputed_best_delta - epsilon, -recomputed_best_score, best_node))
+
         return previous_best_heap
     else:
         stats['miss'] += 1
         # Need to do a full recompute. Oh well.
-        return compute_best_heap(graph, current_seed_set, prev_spread,
+        heap = compute_best_heap(graph, current_seed_set, prev_spread,
                                  iteration_count)
+        return heap
 
 
 def build_seed_set_lg(graph, budget, iteration_count):
@@ -201,6 +223,10 @@ def build_seed_set_lg(graph, budget, iteration_count):
                                                              budget,
                                                              best_spread))
         seed_set.add(best_node)
+        print("New best node: {0}".format(best_node))
+        print("Biggest delta: {0}".format(best_spread_delta))
+        # print("Seed set: {0}".format(sorted([s.document_id[-5:] for s in seed_set])))
+        print()
 
     return seed_set, stats, best_spread
 

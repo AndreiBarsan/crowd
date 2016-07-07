@@ -1,6 +1,7 @@
 """Utility for experimenting with graph sampling. Helps profile stuff."""
 
 import logging
+import random
 import time
 
 from crowd.config import FULLTEXT_FOLDER
@@ -11,6 +12,9 @@ from crowd.graph_sampling import build_seed_set_lg
 from crowd.topic import load_topic_metadata
 
 import click
+
+
+RANDOM_SEED = 1234
 
 
 @click.group()
@@ -38,6 +42,8 @@ def solo(budget, iteration_count):
     turk_judgements = read_useful_judgement_labels()
     ground_truth = read_ground_truth()
 
+    random.seed(RANDOM_SEED)
+
     # Topic: 20814 Elvish Language
     topic_id = '20814'
     # topic_id = '20704'
@@ -52,7 +58,6 @@ def solo(budget, iteration_count):
     n_docs = graph.nx_graph.number_of_nodes()
     print("Total nodes: {0}".format(n_docs))
 
-    iteration_count = 10
     start = time.time()
     result, stats, best_spread = build_seed_set_lg(graph.nx_graph,
                                                    budget=budget,
