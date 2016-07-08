@@ -18,7 +18,25 @@ from crowd.topic import load_topic_metadata
 from crowd.util import get_git_revision_hash
 
 
-def sample_edges(graph: nx.Graph, seed_set: Sequence[NxDocumentNode]) -> Sequence[NxDocumentNode]:
+class Reachability(object):
+    def compute_reachability(self, sampled_graph: nx.Graph, seed_set: Sequence[NxDocumentNode]) -> Sequence[NxDocumentNode]:
+        pass
+
+
+class DefaultReachability(Reachability):
+    """Simple implementation for computing the reachability of a seed set."""
+
+    def compute_reachability(self, sampled_graph: nx.Graph, seed_set: Sequence[NxDocumentNode]) -> Sequence[NxDocumentNode]:
+        # Compute the reachability given the seed set and the nodes we sampled.
+        all_reached = set()
+        for seed_node in seed_set:
+            reached = set(nx.shortest_path(sampled_graph, source=seed_node).keys())
+            all_reached |= reached
+
+        return all_reached
+
+
+def sample_edges_ic(graph: nx.Graph, seed_set: Sequence[NxDocumentNode]) -> Sequence[NxDocumentNode]:
     """
     Samples every edge in the graph with the probability = similarity.
 
@@ -35,36 +53,76 @@ def sample_edges(graph: nx.Graph, seed_set: Sequence[NxDocumentNode]) -> Sequenc
 
     for from_node, to_node, data in graph.edges(data=True):
         if random.random() <= data['similarity']:
-            # TODO(andrei): Batching this (i.e. only add all sampled at once) might
-            # speed things up!
+            # Note: Batching this (i.e. only add all sampled at once) actually
+            # slows things down under NetworkX...
             sampled.add_edge(from_node, to_node)
 
-    # Compute the reachability given the seed set and the nodes we sampled.
-    all_reached = set()
-    for seed_node in seed_set:
-        reached = set(nx.shortest_path(sampled, source=seed_node).keys())
-        all_reached |= reached
-
+    all_reached = Reachability().compute_reachability(sampled, seed_set)
     return all_reached
 
 
-def simulate_spread(graph, seed_set, iteration_count):
-    """Simulates information spread in 'graph' using IC model.
+def sample_edges_lt(graph: nx.Graph, seed_set: Sequence[NxDocumentNode]) -> Sequence[NxDocumentNode]:
+    """Linear Threshold Model."""
+
+    sampled = nx.Graph(graph)
+    sampled.remove_edges_from(sampled.edges())
+
+    # TODO(andrei): Consider doing preprocessing and e.g. probability
+    # normalizations somewhere else, to avoid doing it every time. This may be
+    # a serious bottleneck, so it could be useful to roll your own
+    # implementation.
+
+    # Each node select at most one incoming edge, with probability proportional
+    # to its weight. Since our graph is not directed, there's no difference
+    # between incoming and outgoing edges.
+    for node in graph:
+        # TODO(andrei): Numpy-ify!
+        others = []
+        sims = []
+        for other, edge in graph[node].items():
+            sim = edge['similarity']
+            # edges.append(edge)
+            others.append(other)
+            sims.append(sim)
+
+        if len(others) == 0:
+            # No edge to sample.
+            continue
+
+        probs = np.array(sims)
+        probs /= np.sum(probs)
+
+        kept_other = np.random.choice(others, p=probs)
+        sampled.add_edge(node, kept_other)
+
+    all_reached = Reachability().compute_reachability(sampled, seed_set)
+    return all_reached
+
+
+def simulate_spread(graph, seed_set, edge_sample_count: int, sample_edges):
+    """Simulates information spread in 'graph' using a particular model.
+
+    Args:
+        graph: The graph on which to operate.
+        seed_set: The nodes which are active from the beginning.
+        iteration_count: How many edges to sample before stopping.
+        sample_edges: A function which performs edge sampling, such as
+                      'sample_edges_ic'.
 
     Returns:
         The influence spread of the given seed set in the graph.
-        This is a number beween 0 and the size of the graph signifying
+        This is a number between 0 and the size of the graph signifying
         the number of nodes we expect to reach from the seed set in the
         given graph, approximated using 'iteration_count' iterations.
     """
-    reach_sum = 0
+    reach_sum = 0.0
 
-    for k in range(iteration_count):
+    for k in range(edge_sample_count):
         result = sample_edges(graph, seed_set)
         reach_sum += len(result)
 
-    reach_exp = reach_sum / iteration_count
-    return reach_exp
+    expected_reach = reach_sum / edge_sample_count
+    return expected_reach
 
 
 # TODO(andrei): Use this to test lazy greedy implementation. Should be quite easy.
@@ -75,6 +133,11 @@ def pick_next_best(graph, current_seed_set, iteration_count):
     is submodular.
     """
 
+    # TODO(andrei): Consider just deleting this function.
+
+    # TODO(andrei): Parameterize this!
+    edge_sampler = sample_edges_ic
+
     best_spread = -1
     best_node = None
     for node in graph.nodes():
@@ -83,7 +146,8 @@ def pick_next_best(graph, current_seed_set, iteration_count):
                 graph,
                 # TODO(andrei): Is there a better way to do this?
                 current_seed_set | {node},
-                iteration_count)
+                iteration_count,
+                edge_sampler)
 
             if expected_spread > best_spread:
                 best_spread = expected_spread
@@ -110,6 +174,9 @@ def compute_best_heap(graph, current_seed_set, prev_spread, iteration_count):
     """Similar to 'pick_next_best', but returns a priority queue of all
     candidates."""
 
+    # TODO(andrei): Parameterize this!
+    edge_sampler = sample_edges_ic
+
     spread_node_heap = []
     for node in graph.nodes():
         # Skip nodes which are not safe to sample because they have no real votes.
@@ -120,7 +187,8 @@ def compute_best_heap(graph, current_seed_set, prev_spread, iteration_count):
             expected_benefit = simulate_spread(
                 graph,
                 current_seed_set | {node},
-                iteration_count)
+                iteration_count,
+                edge_sampler)
             assert prev_spread <= 0
             node_marginal_benefit = expected_benefit - (-prev_spread)
             # By default, python's heap is a min-heap, so we need to invert this here sign.
@@ -170,6 +238,7 @@ def pick_next_best_lazy(graph, current_seed_set, iteration_count,
         return compute_best_heap(graph, current_seed_set, 0, iteration_count)
 
     epsilon = kw.get('epsilon', 0.5)
+    edge_sampler = kw.get('edge_sampler', sample_edges_ic)
 
     # The first value in the previous best heap has already been added to the
     # seed set.
@@ -180,14 +249,16 @@ def pick_next_best_lazy(graph, current_seed_set, iteration_count,
 
     recomputed_best_score = simulate_spread(graph,
                                             current_seed_set | {best_node},
-                                            iteration_count)
+                                            iteration_count,
+                                            edge_sampler)
     # Note: prev_spread is negative!
     recomputed_best_delta = -(recomputed_best_score + prev_spread)
 
     if recomputed_best_delta <= second_best_delta + epsilon:
-        print("Recomputed best delta <= {0}".format(second_best_delta + epsilon))
-        print("Next node should be: {0}".format(best_node))
-        print("Second after that:   {0}".format(second_best_node))
+        # print("Recomputed best delta <= {0}".format(second_best_delta + epsilon))
+        # print("Next node should be: {0}".format(best_node))
+        # print("Second after that:   {0}".format(second_best_node))
+
         stats['hit'] += 1
         # We succeeded in being lazy! Update the delta and score for the best
         # element. Note: heapreplace returns the smallest!
@@ -272,6 +343,9 @@ class LazyGreedyGraphSpreadSampler(DocumentSampler):
         self.best_spread = 0
         self.stats = {'hit': 0, 'miss': 0}
 
+        # TODO(andrei): Better name for this.
+        self.edge_sampler = kw.get('edge_sampler', sample_edges_ic)
+
         random.seed(0x789)
 
     def sample(self, existing_votes, available_topic_judgement):
@@ -288,7 +362,8 @@ class LazyGreedyGraphSpreadSampler(DocumentSampler):
             # nodes in our information diffusion model.
             # TODO(andrei): Re-enable this once you speed the code up.
             # available_topic_judgement.keys(),
-            self.stats)
+            self.stats,
+            edge_sampler=self.edge_sampler)
 
         _, self.best_spread, self.best_node = heapq.heappop(self.best_heap)
         # print("Budget: {}/{}, Spread: {:.2f}".format(index + 1, budget, best_spread))
@@ -302,11 +377,13 @@ class LazyGreedyGraphSpreadSampler(DocumentSampler):
         return self.best_node.document_id
 
 
-def lgss_graph_factory(iteration_count):
+def lgss_graph_factory(iteration_count, **kw):
     """Proxy for ensuring that when computing things in parallel, every worker
     has its own sampler. This is necessary as these samplers are stateful."""
     def res(graph):
-        return LazyGreedyGraphSpreadSampler(graph, iteration_count=iteration_count)
+        return LazyGreedyGraphSpreadSampler(graph,
+                                            iteration_count=iteration_count,
+                                            **kw)
     return res
 
 

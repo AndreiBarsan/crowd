@@ -1,4 +1,4 @@
-"""Data holder classes and utility functions for the document similarity graph."""
+"""Data holder classes and utility functions for the document graph."""
 
 # pylint: disable=too-few-public-methods
 # pylint: disable=wildcard-import, unused-wildcard-import

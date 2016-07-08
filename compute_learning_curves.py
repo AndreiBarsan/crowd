@@ -16,7 +16,7 @@ from crowd.cross_topic import *
 from crowd.data import *
 from crowd.experiment_config import ExperimentConfig
 from crowd.graph import *
-from crowd.graph_sampling import lgss_graph_factory
+from crowd.graph_sampling import lgss_graph_factory, sample_edges_lt
 from crowd.topic import load_topic_metadata
 
 random.seed(0x7788)
@@ -50,6 +50,14 @@ experimental_IC_config = ExperimentConfig(aggregate_mev_nx,
                                           nx_graph=True,
                                           document_sampler=lgss_graph_factory(5),
                                           graph_opts={'marker': 'o',
+                                                      'markevery': 15})
+experimental_LT_config = ExperimentConfig(aggregate_mev_nx,
+                                          "LT5-MEV",
+                                          {},
+                                          nx_graph=True,
+                                          document_sampler=lgss_graph_factory(
+                                              5, edge_sampler=sample_edges_lt),
+                                          graph_opts={'marker': 'x',
                                                       'markevery': 15})
 
 # TODO(andrei; research): 0.5 might make this shittier than conventional
@@ -150,6 +158,7 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git):
     # TODO(andrei): Use label and pass git revision explicitly!
     cross_topic_experiments = [
         experimental_IC_config,
+        experimental_LT_config,
         mv_config,
         mv_nn_config,
         mv_nn_075_config,
