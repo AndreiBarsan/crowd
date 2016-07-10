@@ -145,8 +145,8 @@ def get_known_labels(ground_truth_data: Sequence[ExpertLabel]) -> Tuple[Sequence
 
 
 def get_relevant(topic_id: str, ground_truth_data: Sequence[ExpertLabel]) -> Tuple[Sequence[ExpertLabel], Sequence[ExpertLabel]]:
-    """ Returns a set of relevant and a set of non-relevant document IDs
-    from the specified topic.
+    """ Returns a set of relevant and a set of non-relevant expert labels from
+    the specified topic.
     """
     topic_ground_truth_data = [j for j in ground_truth_data
                                if j.topic_id == topic_id]

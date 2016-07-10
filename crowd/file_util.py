@@ -7,8 +7,8 @@ import os
 def get_topic_file_names(base_folder, topic_id):
     topic_folder = os.path.join(base_folder, str(topic_id))
     return [f for f in os.listdir(topic_folder)
-            if os.path.isfile(os.path.join(topic_folder, f))
-            and f.endswith(".txt")]
+            if os.path.isfile(os.path.join(topic_folder, f)) and
+            f.endswith(".txt")]
 
 
 def read_file(name):
@@ -38,8 +38,10 @@ def get_all_files(base_folder):
 
     all_file_names = []
     for topic_id in topic_ids:
-        all_file_names += [os.path.join(str(topic_id), fname) for fname
-                           in get_topic_file_names(base_folder, topic_id)]
+        # This can help skip dummy files which may be present in that folder.
+        if os.path.isdir(os.path.join(base_folder, topic_id)):
+            all_file_names += [os.path.join(str(topic_id), fname) for fname
+                               in get_topic_file_names(base_folder, topic_id)]
 
     # A map of file names (IDs) to their contents.
     doc_id_to_doc = {}
