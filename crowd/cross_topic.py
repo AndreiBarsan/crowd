@@ -39,6 +39,8 @@ def compute_cross_topic_learning(experiments: Sequence[ExperimentConfig],
             logging.info("Sampling from regular graph.")
             graphs_by_topic_id = experiment_data.topic_id_to_graph
 
+        # This adds the custom cfg parameters to 'kw', so that they
+        # eventually reach 'evaluate_iteration'.
         new_kw = kw.copy()
         new_kw.update(cfg.params)
         frame = cross_topic_learning_curve_frame(
@@ -62,6 +64,7 @@ def cross_topic_learning_curve_frame(graphs_by_topic_id, cfg, judgements,
     aggregation_function = cfg.vote_aggregator
     document_sampler = cfg.document_sampler
     label = cfg.name
+    progress_every = kw.get('topic_progress_every', 1)
 
     print("Processing aggregator: {0}.".format(label))
     topic_count = len(graphs_by_topic_id)
@@ -72,8 +75,9 @@ def cross_topic_learning_curve_frame(graphs_by_topic_id, cfg, judgements,
             print("Reached limit. Stopping.")
             break
 
-        if idx % 1 == 0:
-            print("Processing topic number {0}/{1}.".format(idx, topic_count))
+        if (idx + 1) % progress_every == 0:
+            print("Processing topic number {0}/{1}.".format(idx + 1,
+                                                            topic_count))
 
         topic_judgements = get_topic_judgements_by_doc_id(topic_id, judgements)
         document_count = len(topic_judgements)

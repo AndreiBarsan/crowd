@@ -25,18 +25,20 @@ class NxDocumentGraph(object):
     TODO(andrei): Document when to use this, and when to use the regular
                   'DocumentGraph'.
     """
-    def __init__(self, topic, nx_graph):
+    def __init__(self, topic, nx_graph, topic_corpus, term_doc_matrix):
         self.topic = topic
         self.nx_graph = nx_graph
 
+        # A list of (doc_id, text) tuples for all of this topic's documents.
+        self.topic_corpus = topic_corpus
+        # A matrix of topic-specific tf-idf representations.
+        self.term_doc_matrix = term_doc_matrix
+
         # TODO(andrei): Cleaner version of this after you sleep more.
-        self.node_map = {node.document_id:node for node in nx_graph.nodes()}
+        self.node_map = {node.document_id: node for node in nx_graph.nodes()}
 
     def get_node(self, node_id):
-        print("Getting node of ID={}".format(node_id))
-        result = self.node_map[node_id]
-        print("Result of node get: {}".format(result))
-        return result
+        return self.node_map[node_id]
 
     def get_nodes(self):
         return self.nx_graph.nodes()
@@ -208,7 +210,7 @@ def build_nx_document_graph(topic,
             nx_graph.add_edge(node, other_node, {'similarity': sim})
 
     print("{} hidden nodes (due to no data)".format(len(hidden_nodes)))
-    return NxDocumentGraph(topic, nx_graph)
+    return NxDocumentGraph(topic, nx_graph, corpus, term_doc_matrix)
 
 
 def build_document_graph(topic,

@@ -1,7 +1,7 @@
 """Utilities for simulating the crowdsourced voting process."""
 
 # pylint: disable=missing-docstring, superfluous-parens
-
+import logging
 import random
 from typing import Mapping, Sequence, Tuple, Union
 
@@ -17,10 +17,12 @@ from crowd.topic import Topic
 DEFAULT_BUDGET = 250
 
 # Use all cores for parallel stuff.
-N_CORES = -1
+# N_CORES = -1
+# Use single-threading when experimenting with Matlab.
+N_CORES = 1
 
-
-# TODO(andrei): Python 3.3-compatible ABC!
+# TODO(andrei): Python 3.3-compatible ABC! Check out estimator base classes
+# in sklearn for cross-version-friendly solution!
 class DocumentSampler(object):
     """ABC for components which sample a document from the existing pool.
 
@@ -48,11 +50,11 @@ class LeastVotesSampler(DocumentSampler):
         return (sorted(existing_votes.items(), key=lambda i: len(i[1])))[0][0]
 
 
-def request_vote(topic_judgements, document_id):
+def request_vote(topic_judgements, document_id) -> JudgementRecord:
+    # TODO(andrei): Option to request multiple votes at once.
     votes = topic_judgements[document_id]
     if len(votes) == 0:
-        print("No votes found for document [{}].".format(document_id))
-        return None
+        raise ValueError("No votes found for document [{}].".format(document_id))
 
     vote = random.choice(votes)
     return vote
@@ -69,11 +71,17 @@ def measure_accuracy(evaluated_judgements, ground_truth, topic_judgements):
     match = 0
     fail = 0
 
+    if len(evaluated_judgements) > len(ground_truth):
+        logging.warning("Computed more predictions than ground truth data"
+                        " points (%d vs %d). You may be doing a bit of"
+                        " redundant work.",
+                        len(evaluated_judgements),
+                        len(ground_truth))
+
     for doc_id in ground_truth:
-        # TODO(andrei): Don't make it this far with shitty data. Filter useless
-        # GTs earlier on! Unestabilshed relevance in ground truth.
         if ground_truth[doc_id].label < 0:
-            continue
+            raise ValueError("Unwanted ground truth label with junk relevance."
+                             " (negative, meaning label is useless)")
 
         gt_label = (ground_truth[doc_id].label > 0)
         evaluated_label = evaluated_judgements[doc_id]
@@ -93,16 +101,24 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
     """
 
     # The votes we aggregated so far.
-    # Don't keep track of anything for which we don't have the ground truth,
-    # since there's no way to evaluate that.
+
+    # Ensure we don't try to sample votes where we have NO votes, and no ground
+    # truth. However, if for a document we have a ground truth but no votes,
+    # then it will always drag our numbers down, but we would still have to
+    # keep track of it.
     sampled_votes = {n.document_id: [] for n in topic_graph.nodes
-                     if n.document_id in ground_truth}
+                     if n.document_id in ground_truth or
+                        n.document_id in topic_judgements}
 
     budget = kw['budget'] if 'budget' in kw else DEFAULT_BUDGET
     # How often we actually want to compute the accuracy, in terms of votes
     # sampled. We likely don't need to recompute everything after every
     # single new vote.
     accuracy_every = kw['accuracy_every'] if 'accuracy_every' in kw else 1
+
+    # This contains the IDs of the documents which actually have ground truth
+    # information associated with them.
+    kw['ground_truth_docs'] = ground_truth.keys()
 
     # TODO(andrei) Numpyfy: accuracies = np.zeros(budget // accuracy_every)
     accuracies = []
@@ -164,6 +180,7 @@ def evaluate(topic_graph,
 
     print("Performing evaluation of topic [{}].".format(topic_graph.topic))
     print("Aggregation function: [{}]".format(vote_aggregation))
+    print("Useful ground truth labels available: [{}]".format(len(ground_truth)))
 
     import time
     start = time.time()
@@ -210,7 +227,8 @@ def build_learning_curve(
     topic_judgements = get_topic_judgements_by_doc_id(topic.topic_id,
                                                       judgements)
     topic_ground_truth = {truth.document_id: truth for truth in ground_truth
-                          if truth.topic_id == topic.topic_id}
+                          if truth.topic_id == topic.topic_id and
+                          truth.label >= 0}
 
     # i.e. up to target_votes votes per doc, on average.
     # TODO(andrei) Make this cleaner and more seamless.

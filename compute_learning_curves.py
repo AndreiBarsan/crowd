@@ -59,6 +59,20 @@ experimental_LT_config = ExperimentConfig(aggregate_mev_nx,
                                               5, edge_sampler=sample_edges_lt),
                                           graph_opts={'marker': 'x',
                                                       'markevery': 15})
+experimental_sgd_config = ExperimentConfig(aggregate_lm,
+                                          "LM-SGD",
+                                          {},
+                                          nx_graph=True,
+                                           # Use vanilla random sampler
+                                          graph_opts={'marker': 'o',
+                                                      'markevery': 15})
+experimental_gpml_config = ExperimentConfig(aggregate_gpml,
+                                           "GPML",
+                                           {},
+                                           nx_graph=True,
+                                           # Use vanilla random sampler
+                                           graph_opts={'marker': 'o',
+                                                       'markevery': 15})
 
 # TODO(andrei; research): 0.5 might make this shittier than conventional
 # techniques, as seen in the generic experiment notebook (which had the default
@@ -157,14 +171,17 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
 def learning_curves(label, aggregation_iterations, result_pickle_root, git):
     # TODO(andrei): Use label and pass git revision explicitly!
     cross_topic_experiments = [
-        experimental_IC_config,
-        experimental_LT_config,
+        # experimental_gpml_config,
+        # experimental_sgd_config,
+        # experimental_IC_config,
+        # experimental_LT_config,
         mv_config,
         mv_nn_config,
-        mv_nn_075_config,
+        # mv_nn_075_config,
         mev_1_config,
-        mev_2_config,
-        mev_3_config]
+        # mev_2_config,
+        # mev_3_config]
+    ]
 
     if not os.path.exists(result_pickle_root):
         os.mkdir(result_pickle_root)
@@ -181,7 +198,8 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git):
     logging.info("Finished loading experiment data.")
 
     up_to_votes_per_doc = 1
-    topic_limit = -1
+    # topic_limit = -1
+    topic_limit = 5
 
     logging.info("Kicking off computation...")
     all_frames = compute_cross_topic_learning(

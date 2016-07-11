@@ -28,10 +28,10 @@ def load_topic_metadata(topic_file=TOPIC_DESCRIPTION_FILE):
 
     Returns:
         A map of topic_id -> Topic
-
     """
     xml_root = xml.etree.ElementTree.parse(topic_file).getroot()
-    topic_info = [Topic({field.attrib['name'] : field.text for field in row}) for row in xml_root]
+    topic_info = [Topic({field.attrib['name'] : field.text for field in row})
+                  for row in xml_root]
     id_topic_info = {topic.number : topic for topic in topic_info}
 
     for topic_id in id_topic_info:
