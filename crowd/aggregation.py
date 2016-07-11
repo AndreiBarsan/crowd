@@ -381,7 +381,10 @@ def aggregate_lm(topic_graph: NxDocumentGraph,
 
 
 # Local scratch folder that gets deleted automatically when the job is done.
-MATLAB_TEMP_DIR = '/tmp/scratch/'
+# MATLAB_TEMP_DIR = '/tmp/scratch/'
+# TODO(andrei): Select automatically based on hostname.
+MATLAB_TEMP_DIR = '/scratch/'
+
 
 
 # TODO(andrei): Extract this into dedicated Python MODULE. Document the shit

@@ -10,8 +10,8 @@ fi
 
 cd $1
 # Note: is the 'quit' necessary on Euler?
-#matlab -nodisplay -nojvm -singleCompThread -r 'rungp, quit'
-matlab -nodisplay -nojvm -singleCompThread -r 'rungp'
+matlab -nodisplay -nojvm -singleCompThread -r 'rungp, quit'
+#matlab -nodisplay -nojvm -singleCompThread -r 'rungp'
 
 
 if [[ $(hostname) =~ "euler" ]]; then
