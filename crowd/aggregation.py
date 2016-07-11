@@ -407,10 +407,18 @@ def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
     print("Test data shape: {0}".format(X_test.shape))
 
     print('Running MATLAB, started %s' % str(datetime.datetime.now()))
-    code = subprocess.call(['matlab/run_in_dir.sh', matlab_folder_name])
+    args = ['matlab/run_in_dir.sh', matlab_folder_name]
 
-    if code != 0:
-        # TODO(andrei): More details.
+    from subprocess import Popen, PIPE
+    process = Popen(args, stdout=PIPE, stderr=PIPE)
+    output, err = process.communicate()
+
+    if process.returncode != 0:
+        print("Error running MATLAB.")
+        print("stdout was:")
+        print(output)
+        print("stderr was:")
+        print(err)
         raise OSError('MATLAB code couldn\'t run')
 
     print('Finished %s' % str(datetime.datetime.now()))
@@ -432,8 +440,8 @@ def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
         boolean_label = (result[idx] >= 0.5)
         doc_relevance[doc_id] = boolean_label
 
-    print("Will now quit.")
-    exit(-1)
+    # print("Will now quit.")
+    # exit(-1)
 
     return doc_relevance
 

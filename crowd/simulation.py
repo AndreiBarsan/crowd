@@ -19,7 +19,7 @@ DEFAULT_BUDGET = 250
 # Use all cores for parallel stuff.
 # N_CORES = -1
 # Use single-threading when experimenting with Matlab.
-N_CORES = 1
+N_CORES = 2
 
 # TODO(andrei): Python 3.3-compatible ABC! Check out estimator base classes
 # in sklearn for cross-version-friendly solution!
@@ -77,6 +77,9 @@ def measure_accuracy(evaluated_judgements, ground_truth, topic_judgements):
                         " redundant work.",
                         len(evaluated_judgements),
                         len(ground_truth))
+
+    if len(evaluated_judgements) != len(ground_truth):
+        raise ValueError("Not enough predictions computed!")
 
     for doc_id in ground_truth:
         if ground_truth[doc_id].label < 0:

@@ -172,7 +172,7 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
 def learning_curves(label, aggregation_iterations, result_pickle_root, git):
     # TODO(andrei): Use label and pass git revision explicitly!
     cross_topic_experiments = [
-        # experimental_gpml_config,
+        experimental_gpml_config,
         # experimental_sgd_config,
         # experimental_IC_config,
         # experimental_LT_config,
@@ -180,8 +180,8 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git):
         mv_nn_config,
         # mv_nn_075_config,
         mev_1_config,
-        mev_2_config,
-        mev_3_config
+        # mev_2_config,
+        # mev_3_config
     ]
 
     if not os.path.exists(result_pickle_root):
