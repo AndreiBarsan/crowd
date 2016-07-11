@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Tool for generating aggregate plots for various techniques."""
 
-import datetime
+from datetime import datetime
 import logging
 import os
 import random
@@ -199,8 +199,15 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git):
     logging.info("Finished loading experiment data.")
 
     up_to_votes_per_doc = 1
-    topic_limit = -1
-    # topic_limit = 5
+    # topic_limit = -1
+    topic_limit = 1
+    if topic_limit > -1:
+        print("Topic limit: {0}".format(topic_limit))
+    else:
+        print("No topic limit")
+
+    now = datetime.now()
+    timestamp = int(now.timestamp())
 
     logging.info("Kicking off computation...")
     all_frames = compute_cross_topic_learning(
@@ -213,8 +220,6 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git):
 
     # TODO-LOW(andrei): Add option to simple re-plot old pickle.
 
-    now = datetime.datetime.now()
-    timestamp = int(now.timestamp())
     experiment_folder_name = 'curves-upto-{0}-topic-limit-{1}-{2}'.format(
         up_to_votes_per_doc, topic_limit, timestamp)
     experiment_folder_path = os.path.join(result_pickle_root, experiment_folder_name)

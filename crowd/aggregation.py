@@ -1,9 +1,9 @@
 """Vote aggregation algorithms."""
-import datetime
 import random
 import shutil
 import subprocess
 import sys
+import time
 from typing import Mapping, Sequence, Tuple
 
 import numpy as np
@@ -395,18 +395,17 @@ def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
     y = [-1 if lbl == 0 else +1 for lbl in y]
     y = np.array(y, dtype=np.float64).reshape(-1, 1)
 
-    random.seed()
     folder_id = random.randint(0, sys.maxsize)
 
+    mlab_start_ms = int(time.time() * 1000)
     matlab_folder_name = MATLAB_TEMP_DIR + 'matlab_' + str(folder_id)
     shutil.copytree('matlab', matlab_folder_name)
 
     io.savemat(matlab_folder_name + '/train.mat', mdict={'x': X, 'y': y})
     io.savemat(matlab_folder_name + '/test.mat', mdict={'t': X_test})
 
-    print("Test data shape: {0}".format(X_test.shape))
+    # print("Test data shape: {0}".format(X_test.shape))
 
-    print('Running MATLAB, started %s' % str(datetime.datetime.now()))
     args = ['matlab/run_in_dir.sh', matlab_folder_name]
 
     from subprocess import Popen, PIPE
@@ -421,18 +420,17 @@ def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
         print(err)
         raise OSError('MATLAB code couldn\'t run')
 
-    print('Finished %s' % str(datetime.datetime.now()))
-
-    print('Getting the matrix')
+    # print('Finished %s' % str(datetime.datetime.now()))
+    # print('Getting the matrix')
 
     # Loads a `prob` vector
     prob_location = matlab_folder_name + '/prob.mat'
-    print('Loading prob vector from %s' % prob_location)
+    # print('Loading prob vector from %s' % prob_location)
     mat_objects = io.loadmat(prob_location)
     prob = mat_objects['prob']
 
     result = prob[:, 0]
-    print("Result shape: {0}".format(result.shape))
+    # print("Result shape: {0}".format(result.shape))
     print(result)
 
     doc_relevance = {}
@@ -440,8 +438,12 @@ def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
         boolean_label = (result[idx] >= 0.5)
         doc_relevance[doc_id] = boolean_label
 
-    # print("Will now quit.")
-    # exit(-1)
+    mlab_end_ms = int(time.time() * 1000)
+    mlab_time_ms = mlab_end_ms - mlab_start_ms
+    print("Total MATLAB time: {0}ms".format(mlab_time_ms))
+    # TODO(andrei): Keep track of total time necessary for these operations,
+    # even when multiprocessing.
+    # total_mlab_time_ms += mlab_time_ms
 
     return doc_relevance
 
