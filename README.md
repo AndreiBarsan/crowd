@@ -16,7 +16,7 @@ informative unlabeled documents).
 Most of this project and its code is based on Martin Davtyan's own
 framework and thesis project. His code is [also available on GitHub][0].
 [The theory behind the original project has been published in
-CIKM15.][2]
+CIKM '15.][2]
 
 
 ## Data
@@ -86,4 +86,4 @@ experiment driver. Remote deployment is handled using [Fabric3][1].
  
 [0]:https://github.com/martinthenext/ir-crowd-thesis
 [1]:https://pypi.python.org/pypi/Fabric3
-[2]:http://www.academia.edu/download/40597716/ClusterCrowd4CIKM.pdf
+[2]:https://dl.acm.org/citation.cfm?id=2806460
