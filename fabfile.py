@@ -84,7 +84,7 @@ def _run_euler(run_label):
         # 30 iterations, the toolkit will only scale up to that many CPUs.
         # This wastes 18 of the 48 available Euler CPUs.
         command = ('source euler_voodoo.sh &&'
-                   ' bsub -n 48 -W 4:00'
+                   ' bsub -n 48 -W 24:00'
                    # These flags tell 'bsub' to send an email to the
                    # submitter when the job starts, and when it finishes.
                    ' -B -N'
@@ -102,7 +102,7 @@ def _run_commodity(run_label: str) -> None:
 
 
 def _run_experiment(run_label: str,
-                    aggregation_iterations=48,
+                    aggregation_iterations=40,
                     git_hash=get_git_revision_hash()) -> str:
     """This is command for starting the accuracy evaluation pipeline.
 
@@ -126,8 +126,8 @@ def _sync_data_and_code() -> None:
     remote_folder = os.path.join(work_dir, data_folder)
 
     # This syncs the data (needs to be preprocessed in advance).
-    # rsync(local_dir=data_folder, remote_dir=remote_folder,
-    #       extra_opts='--progress')
+    rsync(local_dir=data_folder, remote_dir=remote_folder,
+          extra_opts='--progress')
 
     # This syncs the entry point script.
     put(local_path='./compute_learning_curves.py',
@@ -135,6 +135,9 @@ def _sync_data_and_code() -> None:
 
     # This syncs the core code.
     rsync(local_dir='crowd/', remote_dir=work_dir + '/crowd')
+
+    # This syncs the matlab stuff.
+    rsync(local_dir='matlab/', remote_dir=work_dir + '/matlab')
 
 
 # def latest_run_id():

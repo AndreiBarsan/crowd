@@ -19,7 +19,7 @@ DEFAULT_BUDGET = 250
 # Use all cores for parallel stuff.
 # N_CORES = -1
 # Use single-threading when experimenting with Matlab.
-N_CORES = -2
+N_CORES = -4
 
 # TODO(andrei): Python 3.3-compatible ABC! Check out estimator base classes
 # in sklearn for cross-version-friendly solution!
