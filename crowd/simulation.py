@@ -114,6 +114,7 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
     # How often we actually want to compute the accuracy, in terms of votes
     # sampled. We likely don't need to recompute everything after every
     # single new vote.
+    # TODO(andrei): Is this still necessary?
     accuracy_every = kw['accuracy_every'] if 'accuracy_every' in kw else 1
 
     # This contains the IDs of the documents which actually have ground truth
@@ -132,7 +133,9 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
 
         if i % accuracy_every == 0:
             # 3. Perform the aggregation.
-            evaluated_judgements = vote_aggregation(topic_graph, sampled_votes,
+            evaluated_judgements = vote_aggregation(topic_graph,
+                                                    sampled_votes,
+                                                    ground_truth.keys(),
                                                     **kw)
 
             # 4. Measure accuracy.

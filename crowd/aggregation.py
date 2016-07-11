@@ -18,7 +18,7 @@ from crowd.graph import NxDocumentGraph
 COIN_FLIP = "COIN_FLIP"
 
 
-def full_mv_aggregation(document_id, topic_judgements):
+def full_mv_aggregation(document_id, topic_judgements) -> bool:
     """Computes the voter consensus for the specified document.
 
     Calculation perform directly on all votes, without relying on any
@@ -36,10 +36,11 @@ def full_mv_aggregation(document_id, topic_judgements):
         raise ValueError("No votes for ground truth document ID#{0}. That's a "
                          "shame.".format(document_id))
 
-    return rel_votes >= non_rel_votes
+    # noinspection PyRedundantParentheses
+    return (rel_votes >= non_rel_votes)
 
 
-def count_votes(votes):
+def count_votes(votes) -> Tuple[int, int]:
     relevant_votes = 0
     non_relevant_votes = 0
     for vote in votes:
@@ -79,7 +80,8 @@ def majority(votes, tie_handling=COIN_FLIP) -> bool:
                          .format(tie_handling))
 
 
-def aggregate_MV_NN(topic_graph, all_sampled_votes, **kw) -> Mapping[str, bool]:
+# noinspection PyPep8Naming
+def aggregate_MV_NN(topic_graph, all_sampled_votes, docs_to_eval, **kw) -> Mapping[str, bool]:
     """Majority voting which tries to steal votes from the closest neighbor.
 
     This method is similar to 'aggregate_MV', but also tries to take some
@@ -89,6 +91,13 @@ def aggregate_MV_NN(topic_graph, all_sampled_votes, **kw) -> Mapping[str, bool]:
         topic_graph: The current topic's document graph. Not used.
         all_sampled_votes: A map from document ID to a list of sampled
             'JudgementRecord's.
+        docs_to_eval: List of doc IDs for which we actually wish to predict.
+                      Useful for limiting the aggregation work only to documents
+                      whose accuracy we can actually evaluate (i.e. which are
+                      in the ground truth; this is usually ~1/10 of all the
+                      documents in a topic)
+
+    Keyword Args:
         rho_s: The similarity threshold below which we ignore the nearest
             neighbor.
         seek_good_neighbor: Enables a more thorough nearest neighbor search,
@@ -111,7 +120,8 @@ def aggregate_MV_NN(topic_graph, all_sampled_votes, **kw) -> Mapping[str, bool]:
     return {document_id: aggregator(topic_graph, document_id,
                                     document_votes, all_sampled_votes,
                                     rho_s, **kw)
-            for (document_id, document_votes) in all_sampled_votes.items()}
+            for (document_id, document_votes) in all_sampled_votes.items()
+            if document_id in docs_to_eval}
 
 
 def majority_with_nn(topic_graph, doc_id, votes, all_sampled_votes, rho_s,
@@ -172,7 +182,7 @@ def majority_with_nn_seek(topic_graph, doc_id, votes, all_sampled_votes, rho_s,
     return majority(votes)
 
 
-def aggregate_MV(topic_graph, all_sampled_votes, **kw) -> Mapping[str, bool]:
+def aggregate_MV(topic_graph, all_sampled_votes, docs_to_eval, **kw) -> Mapping[str, bool]:
     """The default way of aggregating crowdsourcing votes.
 
     Args:
@@ -180,13 +190,15 @@ def aggregate_MV(topic_graph, all_sampled_votes, **kw) -> Mapping[str, bool]:
         all_sampled_votes: A map from document ID to a list of
             'JudgementRecord's which have been sampled so far in our
             simulation.
+        docs_to_eval: Only evaluate these documents from 'all_sampled_votes'.
 
     Returns:
         A map which contains a boolean relevance for every document.
     """
 
     return {document_id: majority(document_votes)
-            for (document_id, document_votes) in all_sampled_votes.items()}
+            for (document_id, document_votes) in all_sampled_votes.items()
+            if document_id in docs_to_eval}
 
 
 def mev_aggregator(topic_graph, doc_id, votes, all_sampled_votes, **kw) -> bool:
@@ -268,7 +280,7 @@ def mev_aggregator_nx(
     return majority(augmented_votes)
 
 
-def aggregate_mev(topic_graph, all_sampled_votes, **kw) -> Mapping[str, bool]:
+def aggregate_mev(topic_graph, all_sampled_votes, docs_to_eval, **kw) -> Mapping[str, bool]:
     """Performs 'MergeEnoughVotes'-style aggregation.
 
     Returns:
@@ -277,22 +289,25 @@ def aggregate_mev(topic_graph, all_sampled_votes, **kw) -> Mapping[str, bool]:
     return {document_id: mev_aggregator(topic_graph, document_id,
                                         document_votes, all_sampled_votes,
                                         **kw)
-            for (document_id, document_votes) in all_sampled_votes.items()}
+            for (document_id, document_votes) in all_sampled_votes.items()
+            if document_id in docs_to_eval}
 
 
-def aggregate_mev_nx(topic_graph, all_sampled_votes, **kw) -> Mapping[str, bool]:
+def aggregate_mev_nx(topic_graph, all_sampled_votes, docs_to_eval, **kw) -> Mapping[str, bool]:
     """See: 'aggregate_mev'"""
     return {document_id: mev_aggregator_nx(
         topic_graph,
         document_id,
         document_votes,
         all_sampled_votes,
-        **kw) for (document_id, document_votes) in all_sampled_votes.items()}
+        **kw) for (document_id, document_votes) in all_sampled_votes.items()
+            if document_id in docs_to_eval}
 
 
 def classifier_aggregation_preprocess(
         topic_graph: NxDocumentGraph,
         all_sampled_votes: Mapping[str, Sequence[JudgementRecord]],
+        docs_to_eval: Sequence[str],
         **kw
 ) -> Tuple[sparse.spmatrix, np.ndarray, list, np.ndarray]:
     """Prepares the data for feeding into an advanced aggregation system.
@@ -327,14 +342,13 @@ def classifier_aggregation_preprocess(
     # Approach used in Martin's interop code:
     # y = np.array(labels, dtype=np.float64)[np.newaxis].T
 
-    test_doc_ids = list(kw['ground_truth_docs'])
     X_test_raw = []
-    for doc_id in test_doc_ids:
+    for doc_id in docs_to_eval:
         X_test_raw.append(doc_repr[doc_id])
 
     X_test = sparse.vstack(X_test_raw)
 
-    return X, y, test_doc_ids, X_test
+    return X, y, docs_to_eval, X_test
 
 
 def aggregate_lm(topic_graph: NxDocumentGraph,
@@ -342,7 +356,7 @@ def aggregate_lm(topic_graph: NxDocumentGraph,
                  **kw):
     """Aggregates votes using a simple linear classifier.
 
-    Highly experimental!
+    Highly experimental! Likely outdated. Likely vastly outperformed by GP.
     """
     clf = SGDClassifier()
     X, y, test_doc_ids, X_test = classifier_aggregation_preprocess(
@@ -373,9 +387,9 @@ MATLAB_TEMP_DIR = '/tmp/scratch/'
 # TODO(andrei): Extract this into dedicated Python MODULE. Document the shit
 # out of it and make it easy to add support for pymatbridge or native Python
 # GP code in the future!
-def aggregate_gpml(topic_graph, all_sampled_votes, **kw):
+def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
     X, y, test_doc_ids, X_test = classifier_aggregation_preprocess(
-        topic_graph, all_sampled_votes, **kw)
+        topic_graph, all_sampled_votes, docs_to_eval, **kw)
 
     # Massage the labels into what Matlab is expecting.
     y = [-1 if lbl == 0 else +1 for lbl in y]
