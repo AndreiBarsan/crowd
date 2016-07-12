@@ -20,7 +20,7 @@ from crowd.util import get_git_revision_hash
 
 class Reachability(object):
     def compute_reachability(self, sampled_graph: nx.Graph, seed_set: Sequence[NxDocumentNode]) -> Sequence[NxDocumentNode]:
-        pass
+        raise RuntimeError("Ghetto abstract method. Do not use.")
 
 
 class DefaultReachability(Reachability):
@@ -57,7 +57,7 @@ def sample_edges_ic(graph: nx.Graph, seed_set: Sequence[NxDocumentNode]) -> Sequ
             # slows things down under NetworkX...
             sampled.add_edge(from_node, to_node)
 
-    all_reached = Reachability().compute_reachability(sampled, seed_set)
+    all_reached = DefaultReachability().compute_reachability(sampled, seed_set)
     return all_reached
 
 

@@ -173,10 +173,10 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
 def learning_curves(label, aggregation_iterations, result_pickle_root, git):
     # TODO(andrei): Use label and pass git revision explicitly!
     cross_topic_experiments = [
-        experimental_gpml_config,
         # experimental_sgd_config,
         experimental_IC_config,
         # experimental_LT_config,
+        experimental_gpml_config,
         mv_config,
         mv_nn_config,
         # mv_nn_075_config,
@@ -200,7 +200,7 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git):
     logging.info("Finished loading experiment data.")
 
     up_to_votes_per_doc = 1
-    topic_limit = 15
+    topic_limit = 5
     # topic_limit = 3
     if topic_limit > -1:
         print("Topic limit: {0}".format(topic_limit))

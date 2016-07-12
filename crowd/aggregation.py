@@ -438,12 +438,12 @@ def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
         # Loads a `prob` vector
         prob_location = matlab_folder_name + '/prob.mat'
         # print('Loading prob vector from %s' % prob_location)
+        # TODO(andrei): If this file is missing, something went horribly wrong.
+        # Report that!
         mat_objects = io.loadmat(prob_location)
         prob = mat_objects['prob']
 
         result = prob[:, 0]
-        # print("Result shape: {0}".format(result.shape))
-        print(result)
 
         doc_relevance = {}
         for idx, doc_id in enumerate(test_doc_ids):

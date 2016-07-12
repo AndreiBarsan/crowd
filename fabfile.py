@@ -21,13 +21,11 @@ import os
 
 from fabric.api import *
 from fabric.contrib.project import rsync_project as rsync
+from fabric.state import env as fenv
 
 from crowd.util import get_git_revision_hash
 
 env.use_ssh_config = True
-
-# TODO(andrei): Compute dynamically.
-work_dir = '/cluster/scratch/{0}/crowd'.format('barsana')
 
 
 # Hint: set your appropriate user and host for Euler in your '~/.ssh/config'!
@@ -73,18 +71,21 @@ def _run_euler(run_label):
     print("Euler job label: {0}".format(run_label))
     print("Working in your scratch folder, files unused for 15 days are deleted"
           " automatically!")
+    print("Euler (ETHZ) username: {0}".format(fenv['user']))
+    work_dir = '/cluster/scratch/{0}/crowd'.format(fenv['user'])
+    print("Will work in: {0}".format(work_dir))
 
     put(local_path='./remote/euler_voodoo.sh',
         remote_path=os.path.join(work_dir, 'euler_voodoo.sh'))
 
-    _sync_data_and_code()
+    _sync_data_and_code(work_dir)
 
     with cd(work_dir):
         # TODO(andrei): Consider parallelizing better. If using e.g.
         # 30 iterations, the toolkit will only scale up to that many CPUs.
         # This wastes 18 of the 48 available Euler CPUs.
         command = ('source euler_voodoo.sh &&'
-                   ' bsub -n 48 -W 24:00'
+                   ' bsub -n 48 -W 4:00'
                    # These flags tell 'bsub' to send an email to the
                    # submitter when the job starts, and when it finishes.
                    ' -B -N'
@@ -94,7 +95,8 @@ def _run_euler(run_label):
 
 def _run_commodity(run_label: str) -> None:
     """Runs the pipeline on commodity hardware with no LSF job queueing."""
-    _sync_data_and_code()
+    work_dir = "~/crowd"
+    _sync_data_and_code(work_dir)
 
     with cd(work_dir):
         command = 'python3 ' + _run_experiment(run_label)
@@ -117,7 +119,7 @@ def _run_experiment(run_label: str,
             ' --git {2}').format(aggregation_iterations, run_label, git_hash)
 
 
-def _sync_data_and_code() -> None:
+def _sync_data_and_code(work_dir: str) -> None:
     # Ensure we have a trailing slash for rsync to work as intended.
     data_folder = 'data/'
     run('mkdir -p {0}/{1}'.format(work_dir, data_folder))
