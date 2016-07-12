@@ -25,6 +25,7 @@ np.random.seed(0x7788)
 
 
 # Various experiment configs from the original comparison notebook.
+# LV = least-votes
 mv_config = ExperimentConfig(aggregate_MV, "LV-MV", {})
 mv_nn_config = ExperimentConfig(aggregate_MV_NN, "LV-MVNN(0.5)", {'rho_s': 0.5})
 mv_nn_075_config = ExperimentConfig(aggregate_MV_NN, "LV-MVNN(0.75)", {'rho_s': 0.75})
@@ -174,14 +175,14 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git):
     cross_topic_experiments = [
         experimental_gpml_config,
         # experimental_sgd_config,
-        # experimental_IC_config,
+        experimental_IC_config,
         # experimental_LT_config,
         mv_config,
         mv_nn_config,
         # mv_nn_075_config,
         mev_1_config,
-        # mev_2_config,
-        # mev_3_config
+        mev_2_config,
+        mev_3_config
     ]
 
     if not os.path.exists(result_pickle_root):
@@ -199,8 +200,8 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git):
     logging.info("Finished loading experiment data.")
 
     up_to_votes_per_doc = 1
-    # topic_limit = -1
-    topic_limit = 3
+    topic_limit = 15
+    # topic_limit = 3
     if topic_limit > -1:
         print("Topic limit: {0}".format(topic_limit))
     else:

@@ -1,8 +1,10 @@
 """Vote aggregation algorithms."""
+import os
 import random
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from typing import Mapping, Sequence, Tuple
 
@@ -386,7 +388,6 @@ def aggregate_lm(topic_graph: NxDocumentGraph,
 MATLAB_TEMP_DIR = '/scratch/'
 
 
-
 # TODO(andrei): Extract this into dedicated Python MODULE. Document the shit
 # out of it and make it easy to add support for pymatbridge or native Python
 # GP code in the future!
@@ -398,55 +399,63 @@ def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
     y = [-1 if lbl == 0 else +1 for lbl in y]
     y = np.array(y, dtype=np.float64).reshape(-1, 1)
 
-    folder_id = random.randint(0, sys.maxsize)
+    with tempfile.TemporaryDirectory(prefix='matlab_', dir=MATLAB_TEMP_DIR) as temp_dir:
+        matlab_folder_name = os.path.join(temp_dir, 'matlab')
+        # folder_id = random.randint(0, sys.maxsize)
 
-    mlab_start_ms = int(time.time() * 1000)
-    matlab_folder_name = MATLAB_TEMP_DIR + 'matlab_' + str(folder_id)
-    shutil.copytree('matlab', matlab_folder_name)
+        mlab_start_ms = int(time.time() * 1000)
+        # matlab_folder_name = MATLAB_TEMP_DIR + 'matlab_' + str(folder_id)
+        shutil.copytree('matlab', matlab_folder_name)
 
-    io.savemat(matlab_folder_name + '/train.mat', mdict={'x': X, 'y': y})
-    io.savemat(matlab_folder_name + '/test.mat', mdict={'t': X_test})
+        io.savemat(matlab_folder_name + '/train.mat', mdict={'x': X, 'y': y})
+        io.savemat(matlab_folder_name + '/test.mat', mdict={'t': X_test})
 
-    # print("Test data shape: {0}".format(X_test.shape))
+        # print("Test data shape: {0}".format(X_test.shape))
 
-    args = ['matlab/run_in_dir.sh', matlab_folder_name]
+        args = ['matlab/run_in_dir.sh', matlab_folder_name]
 
-    from subprocess import Popen, PIPE
-    process = Popen(args, stdout=PIPE, stderr=PIPE)
-    output, err = process.communicate()
+        from subprocess import Popen, PIPE
 
-    if process.returncode != 0:
-        print("Error running MATLAB.")
-        print("stdout was:")
-        print(output)
-        print("stderr was:")
-        print(err)
-        raise OSError('MATLAB code couldn\'t run')
+        try:
+            process = Popen(args, stdout=PIPE, stderr=PIPE)
+            output, err = process.communicate()
+        except OSError as err:
+            print("Unexpected OSError running MATLAB script. argv was: [{0}]."
+                  .format(args))
+            raise
 
-    # print('Finished %s' % str(datetime.datetime.now()))
-    # print('Getting the matrix')
+        if process.returncode != 0:
+            print("Error running MATLAB.")
+            print("stdout was:")
+            print(output)
+            print("stderr was:")
+            print(err)
+            raise OSError("MATLAB code couldn't run (nonzero script exit code).")
 
-    # Loads a `prob` vector
-    prob_location = matlab_folder_name + '/prob.mat'
-    # print('Loading prob vector from %s' % prob_location)
-    mat_objects = io.loadmat(prob_location)
-    prob = mat_objects['prob']
+        # print('Finished %s' % str(datetime.datetime.now()))
+        # print('Getting the matrix')
 
-    result = prob[:, 0]
-    # print("Result shape: {0}".format(result.shape))
-    print(result)
+        # Loads a `prob` vector
+        prob_location = matlab_folder_name + '/prob.mat'
+        # print('Loading prob vector from %s' % prob_location)
+        mat_objects = io.loadmat(prob_location)
+        prob = mat_objects['prob']
 
-    doc_relevance = {}
-    for idx, doc_id in enumerate(test_doc_ids):
-        boolean_label = (result[idx] >= 0.5)
-        doc_relevance[doc_id] = boolean_label
+        result = prob[:, 0]
+        # print("Result shape: {0}".format(result.shape))
+        print(result)
 
-    mlab_end_ms = int(time.time() * 1000)
-    mlab_time_ms = mlab_end_ms - mlab_start_ms
-    print("Total MATLAB time: {0}ms".format(mlab_time_ms))
-    # TODO(andrei): Keep track of total time necessary for these operations,
-    # even when multiprocessing.
-    # total_mlab_time_ms += mlab_time_ms
+        doc_relevance = {}
+        for idx, doc_id in enumerate(test_doc_ids):
+            boolean_label = (result[idx] >= 0.5)
+            doc_relevance[doc_id] = boolean_label
+
+        mlab_end_ms = int(time.time() * 1000)
+        mlab_time_ms = mlab_end_ms - mlab_start_ms
+        print("Total MATLAB time: {0}ms".format(mlab_time_ms))
+        # TODO(andrei): Keep track of total time necessary for these operations,
+        # even when multiprocessing.
+        # total_mlab_time_ms += mlab_time_ms
 
     return doc_relevance
 
