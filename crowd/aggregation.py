@@ -399,11 +399,12 @@ def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
     y = [-1 if lbl == 0 else +1 for lbl in y]
     y = np.array(y, dtype=np.float64).reshape(-1, 1)
 
-    with tempfile.TemporaryDirectory(prefix='matlab_', dir=MATLAB_TEMP_DIR) as temp_dir:
+    with tempfile.TemporaryDirectory(prefix='matlab_', dir=MATLAB_TEMP_DIR) \
+            as temp_dir:
         matlab_folder_name = os.path.join(temp_dir, 'matlab')
-        # folder_id = random.randint(0, sys.maxsize)
 
         mlab_start_ms = int(time.time() * 1000)
+        # folder_id = random.randint(0, sys.maxsize)
         # matlab_folder_name = MATLAB_TEMP_DIR + 'matlab_' + str(folder_id)
         shutil.copytree('matlab', matlab_folder_name)
 
@@ -437,11 +438,23 @@ def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
 
         # Loads a `prob` vector
         prob_location = matlab_folder_name + '/prob.mat'
-        # print('Loading prob vector from %s' % prob_location)
-        # TODO(andrei): If this file is missing, something went horribly wrong.
-        # Report that!
-        mat_objects = io.loadmat(prob_location)
-        prob = mat_objects['prob']
+
+        try:
+            mat_objects = io.loadmat(prob_location)
+            prob = mat_objects['prob']
+        except FileNotFoundError as err:
+            # This seems to happen almost at random, despite creating dynamic
+            # uniquely-named folders.
+            raise RuntimeError("Critical error running Matlab. No output"
+                               " produced. Perhaps there was a race condition?"
+                               " Matlab stdout:\n{0}\nMatlab stderr:\n{1}\n"
+                               " Matlab exit code: {2}\nError:{3}"
+                               .format(output, err, process.returncode, err))
+
+        # Double sanity check.
+        if err is not None and len(err) > 0:
+            raise RuntimeError("MATLAB had error output:\n{0}\nStandard output"
+                               " was: {1}".format(err, output))
 
         result = prob[:, 0]
 

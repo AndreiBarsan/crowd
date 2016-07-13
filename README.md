@@ -61,9 +61,6 @@ experiment driver. Remote deployment is handled using [Fabric3][1].
  * Improve existing methods using more advanced techniques, such as adaptive
    weights or combinations of techniques (poor man's boosting).
  * Explore usability of graph structure for active learning tasks.
- * Integrate Gaussian Process aggregation into this project somehow,
-   even if it confines to project to just running on Euler for the time
-   being.
 
 ## Rough timeline
 
@@ -83,6 +80,7 @@ experiment driver. Remote deployment is handled using [Fabric3][1].
 
 ### May 17 - August
  * Information diffusion techniques in graph.
+ 
  
 [0]:https://github.com/martinthenext/ir-crowd-thesis
 [1]:https://pypi.python.org/pypi/Fabric3
