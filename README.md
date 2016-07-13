@@ -21,7 +21,7 @@ CIKM '15.][2]
 
 ## Data
 
-TODO(andrei) More information about getting the data, even though it's
+TODO(andrei): More information about getting the data, even though it's
 behind a paywall or at least a bureaucracy-wall.
 
 

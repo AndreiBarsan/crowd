@@ -406,7 +406,11 @@ def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
         mlab_start_ms = int(time.time() * 1000)
         # folder_id = random.randint(0, sys.maxsize)
         # matlab_folder_name = MATLAB_TEMP_DIR + 'matlab_' + str(folder_id)
-        shutil.copytree('matlab', matlab_folder_name)
+        try:
+            shutil.copytree('matlab', matlab_folder_name)
+        except shutil.Error as e:
+            print("Fatal error setting up the temporary MATLAB folder.")
+            raise
 
         io.savemat(matlab_folder_name + '/train.mat', mdict={'x': X, 'y': y})
         io.savemat(matlab_folder_name + '/test.mat', mdict={'t': X_test})

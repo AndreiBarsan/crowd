@@ -86,6 +86,8 @@ def _run_euler(run_label):
         # This wastes 18 of the 48 available Euler CPUs.
         command = ('source euler_voodoo.sh &&'
                    ' bsub -n 48 -W 24:00'
+                   # Request 10Gb scratch space per processor.
+                   ' -R "rusage[scratch=10000]"'
                    # These flags tell 'bsub' to send an email to the
                    # submitter when the job starts, and when it finishes.
                    ' -B -N'
