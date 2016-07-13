@@ -201,7 +201,7 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git):
 
     up_to_votes_per_doc = 1
     # topic_limit = -1
-    topic_limit = 1
+    topic_limit = 5
     if topic_limit > -1:
         print("Topic limit: {0}".format(topic_limit))
     else:

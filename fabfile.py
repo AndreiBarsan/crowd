@@ -85,7 +85,7 @@ def _run_euler(run_label):
         # 30 iterations, the toolkit will only scale up to that many CPUs.
         # This wastes 18 of the 48 available Euler CPUs.
         command = ('source euler_voodoo.sh &&'
-                   ' bsub -n 48 -W 4:00'
+                   ' bsub -n 48 -W 24:00'
                    # Request 10Gb scratch space per processor.
                    ' -R "rusage[scratch=10000]"'
                    # These flags tell 'bsub' to send an email to the

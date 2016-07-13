@@ -19,7 +19,6 @@ DEFAULT_BUDGET = 250
 # TODO(andrei): De-constantify and pass as argument to program.
 # Use all cores for parallel stuff.
 # N_CORES = -1
-# Use single-threading when experimenting with Matlab.
 N_CORES = -8
 
 
