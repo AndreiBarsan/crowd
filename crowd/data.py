@@ -96,7 +96,15 @@ class ExpertLabel(object):
         return self.label > 0
 
     def __repr__(self):
-        relevance = "Relevant" if self.is_relevant() else "Not relevant"
+
+        if self.label < 0:
+            relevance = "Unknown"
+        elif self.label == 0:
+            relevance = "Non-relevant"
+        elif self.label in [1, 2]:
+            relevance = "Relevant"
+        else:
+            relevance = "Disallowed: [{0}]".format(self.label)
         return "%s:%s:%s" % (self.topic_id, self.document_id, relevance)
 
 
@@ -123,7 +131,7 @@ def read_worker_labels(file_name: str) -> List[WorkerLabel]:
         return [WorkerLabel(line) for line in f]
 
 
-def read_ground_truth():
+def read_ground_truth() -> List[ExpertLabel]:
     """Reads the 2011 test label data files, which are used as the ground truth
     in our evaluation."""
     return read_expert_labels(TEST_LABEL_FILE_SHARED, header=True, sep=',') + \
