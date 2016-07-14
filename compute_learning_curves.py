@@ -69,12 +69,23 @@ experimental_sgd_config = ExperimentConfig(aggregate_lm,
                                           graph_opts={'marker': 'o',
                                                       'markevery': 15})
 experimental_gpml_config = ExperimentConfig(aggregate_gpml,
-                                           "GPML",
+                                           "LV-GP",
                                            {},
                                            nx_graph=True,
                                            # Use vanilla random sampler
                                            graph_opts={'marker': 'o',
                                                        'markevery': 15})
+
+# This is the config for evaluating the core contribution of the paper.
+# Can graph-based document sampling + GP aggregation beat the state of the art
+# from Martin's paper using randomized least-votes sampling + GP aggregation?
+graph_sampling_with_gp = ExperimentConfig(aggregate_gpml,
+                                          "IC5-GP",
+                                          {},
+                                          nx_graph=True,
+                                          document_sampler=lgss_graph_factory(5),
+                                          graph_opts={'marker': 's',
+                                                      'markevery': 15})
 
 # TODO(andrei; research): 0.5 might make this shittier than conventional
 # techniques, as seen in the generic experiment notebook (which had the default
@@ -173,8 +184,9 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
 def learning_curves(label, aggregation_iterations, result_pickle_root, git):
     # TODO(andrei): Use label and pass git revision explicitly!
     cross_topic_experiments = [
+        graph_sampling_with_gp,
         # experimental_sgd_config,
-        experimental_IC_config,
+        # experimental_IC_config,
         # experimental_LT_config,
         experimental_gpml_config,
         mv_config,
@@ -199,9 +211,10 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git):
     experiment_data = load_experiment_data(use_cache=False)
     logging.info("Finished loading experiment data.")
 
+    # TODO(andrei): What about the loser topics (with WAY fewer votes)?
     up_to_votes_per_doc = 1
-    # topic_limit = -1
-    topic_limit = 5
+    topic_limit = -1
+    # topic_limit = 15
     if topic_limit > -1:
         print("Topic limit: {0}".format(topic_limit))
     else:
