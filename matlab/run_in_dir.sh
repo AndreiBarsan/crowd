@@ -22,8 +22,9 @@ mlRes="$?"
 if [[ "$mlRes" -ne 0 ]]; then
     echo "Problem running Matlab! Exit code [$mlRes]."
     exit "$mlRes"
+else
+    echo "Matlab exited OK."
 fi
-
 
 if [[ $(hostname) =~ e[0-9]+ ]]; then
   echo 'Unloading matlab module.'

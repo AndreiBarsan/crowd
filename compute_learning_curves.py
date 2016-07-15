@@ -228,6 +228,7 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git,
     timestamp = int(now.timestamp())
 
     logging.info("Kicking off computation...")
+    # TODO(andrei): Aggregate, plot & pickle after every new topic.
     all_frames = compute_cross_topic_learning(
         cross_topic_experiments,
         up_to_votes_per_doc,

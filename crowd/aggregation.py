@@ -1,4 +1,5 @@
 """Vote aggregation algorithms."""
+import logging
 import os
 import random
 import shutil
@@ -458,8 +459,10 @@ def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
 
         # Double sanity check.
         if err is not None and len(err) > 0:
-            raise RuntimeError("MATLAB had error output:\n{0}\nStandard output"
-                               " was: {1}".format(err, output))
+            logging.warning("MATLAB had error output:\n{0}\nStandard output"
+                            " was:\n{1}".format(err, output))
+            # raise RuntimeError("MATLAB had error output:\n{0}\nStandard output"
+            #                    " was: {1}".format(err, output))
 
         result = prob[:, 0]
 
