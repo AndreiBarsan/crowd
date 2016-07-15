@@ -7,7 +7,8 @@ echo "Current hostname: $(hostname)"
 # "eulerXX" is reserved for the job management nodes.
 if [[ $(hostname) =~ e[0-9]+ ]]; then
   echo 'Running on Euler. Loading matlab module.'
-  module load matlab/8.2
+  # This was originally using matlab/8.2. Why?
+  module load matlab/8.5
 else
   echo 'Running Matlab locally. No module management needed.'
 fi

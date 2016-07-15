@@ -401,7 +401,8 @@ def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
 
     with tempfile.TemporaryDirectory(prefix='matlab_', dir=MATLAB_TEMP_DIR) \
             as temp_dir:
-        matlab_folder_name = os.path.join(temp_dir, 'matlab')
+        temp_dir_pid = temp_dir + str(os.getpid())
+        matlab_folder_name = os.path.join(temp_dir_pid, 'matlab')
 
         mlab_start_ms = int(time.time() * 1000)
         # folder_id = random.randint(0, sys.maxsize)
