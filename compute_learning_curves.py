@@ -181,7 +181,13 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
                    " inspection.")
 @click.option('--git', default="NO-GIT", help="Current git revision hash."
                                               " Useful for reproducibility.")
-def learning_curves(label, aggregation_iterations, result_pickle_root, git):
+@click.option('--topic_limit', default=-1, help="How many topics to process"
+                                                " out of the total 30. Useful"
+                                                " for limiting the processing"
+                                                " for quick tests. -1 means"
+                                                " no limit.")
+def learning_curves(label, aggregation_iterations, result_pickle_root, git,
+                    topic_limit):
     # TODO(andrei): Use label and pass git revision explicitly!
     cross_topic_experiments = [
         graph_sampling_with_gp,
@@ -213,8 +219,6 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git):
 
     # TODO(andrei): What about the loser topics (with WAY fewer votes)?
     up_to_votes_per_doc = 1
-    topic_limit = -1
-    # topic_limit = 15
     if topic_limit > -1:
         print("Topic limit: {0}".format(topic_limit))
     else:

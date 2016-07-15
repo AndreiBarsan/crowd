@@ -30,7 +30,7 @@ env.use_ssh_config = True
 
 # Hint: set your appropriate user and host for Euler in your '~/.ssh/config'!
 @hosts('euler')
-def euler(sub='run', label='euler'):
+def euler(sub='run', label='euler', topic_limit='-1'):
     """
     Submits the pipeline to Euler's batch job system.
 
@@ -42,12 +42,13 @@ def euler(sub='run', label='euler'):
                fragment, such as 'preprocess-v2-bob'. Does NOT get
                shell-escaped, so use special characters (e.g. spaces, $, etc.)
                at your own risk!
+        topic_limit: How many topics to process. -1 means all.
     """
     # To pass multiple arguments, to a fabric command, use:
     #  $ fab euler:run,some-label,foo,bar
 
     if sub == 'run':
-        _run_euler(label)
+        _run_euler(label, topic_limit)
     elif sub == 'status':
         run('bjobs')
     elif sub == 'fetch':
@@ -66,7 +67,7 @@ def gce(sub='run', label='gce'):
         raise ValueError("Unknown GCE action: {0}".format(sub))
 
 
-def _run_euler(run_label):
+def _run_euler(run_label, topic_limit):
     print("Will evaluate system on Euler.")
     print("Euler job label: {0}".format(run_label))
     print("Working in your scratch folder, files unused for 15 days are deleted"
@@ -74,6 +75,7 @@ def _run_euler(run_label):
     print("Euler (ETHZ) username: {0}".format(fenv['user']))
     work_dir = '/cluster/scratch/{0}/crowd'.format(fenv['user'])
     print("Will work in: {0}".format(work_dir))
+    print("Topic limit: {0}".format(topic_limit))
 
     put(local_path='./remote/euler_voodoo.sh',
         remote_path=os.path.join(work_dir, 'euler_voodoo.sh'))
@@ -91,21 +93,23 @@ def _run_euler(run_label):
                    # These flags tell 'bsub' to send an email to the
                    # submitter when the job starts, and when it finishes.
                    ' -B -N'
-                   ' "$HOME"/.venv/bin/python3 ' + _run_experiment(run_label))
+                   ' "$HOME"/.venv/bin/python3 ' +
+                   _run_experiment(run_label, topic_limit))
         run(command, shell_escape=False, shell=False)
 
 
-def _run_commodity(run_label: str) -> None:
+def _run_commodity(run_label: str, topic_limit=-1) -> None:
     """Runs the pipeline on commodity hardware with no LSF job queueing."""
     work_dir = "~/crowd"
     _sync_data_and_code(work_dir)
 
     with cd(work_dir):
-        command = 'python3 ' + _run_experiment(run_label)
+        command = 'python3 ' + _run_experiment(run_label, topic_limit)
         _in_screen(command, 'crowd_screen', shell_escape=False, shell=False)
 
 
 def _run_experiment(run_label: str,
+                    topic_limit: int,
                     aggregation_iterations=32,
                     git_hash=get_git_revision_hash()) -> str:
     """This is command for starting the accuracy evaluation pipeline.
@@ -118,7 +122,9 @@ def _run_experiment(run_label: str,
     return ('compute_learning_curves.py'
             ' --aggregation_iterations {0}'
             ' --label "{1}"'
-            ' --git {2}').format(aggregation_iterations, run_label, git_hash)
+            ' --topic_limit {2}'
+            ' --git {3}').format(aggregation_iterations, run_label, topic_limit,
+                                 git_hash)
 
 
 def _sync_data_and_code(work_dir: str) -> None:
