@@ -66,12 +66,21 @@ def cross_topic_learning_curve_frame(graphs_by_topic_id, cfg, judgements,
     label = cfg.name
     progress_every = kw.get('topic_progress_every', 1)
 
+    # These are topics which much fewer total votes than others, which Martin's
+    # original analysis seems to have skipped.
+    # TODO(andrei): More information about this situation.
+    loser_topics = ['20644', '20922']
+
     print("Processing aggregator: {0}.".format(label))
     topic_count = len(graphs_by_topic_id)
     for idx, (topic_id, topic) in enumerate(graphs_by_topic_id.items()):
+        if topic_id in loser_topics:
+            logging.warning("Skipping \"loser\" topic %s.", topic_id)
+            continue
+
         # This can be used to experiment with the code without committing to
         # go through all topics, which could be very, very time-consuming.
-        if 0 < topic_limit <= idx:
+        if 0 < topic_limit <= (idx + len(loser_topics)):
             print("Reached limit. Stopping.")
             break
 

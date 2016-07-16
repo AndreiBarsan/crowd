@@ -64,6 +64,8 @@ def sample_edges_ic(graph: nx.Graph, seed_set: Sequence[NxDocumentNode]) -> Sequ
 def sample_edges_lt(graph: nx.Graph, seed_set: Sequence[NxDocumentNode]) -> Sequence[NxDocumentNode]:
     """Linear Threshold Model."""
 
+    # TODO(andrei): implement original LT model as described in Kempe et al.
+
     sampled = nx.Graph(graph)
     sampled.remove_edges_from(sampled.edges())
 
@@ -119,13 +121,21 @@ def simulate_spread(graph, seed_set, edge_sample_count: int, sample_edges):
 
     for k in range(edge_sample_count):
         result = sample_edges(graph, seed_set)
+
+        # TODO(andrei): Using naive lengths means nodes have no weights. One
+        # can dynamically set node weights to fine-tune the algorithm. For
+        # instance, a node's weight could be set proportional to the uncertainty
+        # in the node, prioritizing nodes with absolutely no information, but
+        # still giving a boost to nodes which have dissenting votes, as opposed
+        # to nodes where all voters agree.
         reach_sum += len(result)
 
     expected_reach = reach_sum / edge_sample_count
     return expected_reach
 
 
-# TODO(andrei): Use this to test lazy greedy implementation. Should be quite easy.
+# TODO(andrei): Use this to test lazy greedy implementation. Should be quite
+# easy.
 def pick_next_best(graph, current_seed_set, iteration_count):
     """Picks the node which best improves the information spread of the seed set.
 

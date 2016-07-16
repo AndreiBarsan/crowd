@@ -190,7 +190,7 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git,
                     topic_limit):
     # TODO(andrei): Use label and pass git revision explicitly!
     cross_topic_experiments = [
-        graph_sampling_with_gp,
+        # graph_sampling_with_gp,
         # experimental_sgd_config,
         # experimental_IC_config,
         # experimental_LT_config,

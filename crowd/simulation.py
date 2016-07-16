@@ -19,7 +19,7 @@ DEFAULT_BUDGET = 250
 # TODO(andrei): De-constantify and pass as argument to program.
 # Use all cores for parallel stuff.
 # N_CORES = -1
-N_CORES = -8
+N_CORES = -4
 
 
 # TODO(andrei): Python 3.3-compatible ABC! Check out estimator base classes

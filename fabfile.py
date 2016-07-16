@@ -110,7 +110,7 @@ def _run_commodity(run_label: str, topic_limit=-1) -> None:
 
 def _run_experiment(run_label: str,
                     topic_limit: int,
-                    aggregation_iterations=32,
+                    aggregation_iterations=88,
                     git_hash=get_git_revision_hash()) -> str:
     """This is command for starting the accuracy evaluation pipeline.
 
