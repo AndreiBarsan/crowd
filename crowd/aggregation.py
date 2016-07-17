@@ -2,21 +2,17 @@
 import logging
 import os
 import random
-import shutil
-import subprocess
-import sys
-import tempfile
 import time
 from typing import Mapping, Sequence, Tuple
 
 import numpy as np
-import scipy as sp
-from scipy import sparse, io
+from scipy import sparse
 from sklearn.linear_model import SGDClassifier
 
 
 from crowd.data import JudgementRecord
 from crowd.graph import NxDocumentGraph
+from crowd.matlab.disk import matlab_via_disk, MatlabDiskDriver
 
 COIN_FLIP = "COIN_FLIP"
 
@@ -357,10 +353,7 @@ def classifier_aggregation_preprocess(
 def aggregate_lm(topic_graph: NxDocumentGraph,
                  all_sampled_votes: Mapping[str, Sequence[JudgementRecord]],
                  **kw):
-    """Aggregates votes using a simple linear classifier.
-
-    Highly experimental! Likely outdated. Likely vastly outperformed by GP.
-    """
+    """(DEPRECATED) Aggregates votes using a simple linear classifier. """
     clf = SGDClassifier()
     X, y, test_doc_ids, X_test = classifier_aggregation_preprocess(
         topic_graph, all_sampled_votes, **kw)
@@ -383,106 +376,36 @@ def aggregate_lm(topic_graph: NxDocumentGraph,
     return doc_relevance
 
 
-# Local scratch folder that gets deleted automatically when the job is done.
-# MATLAB_TEMP_DIR = '/tmp/scratch/'
-# TODO(andrei): Select automatically based on hostname.
-MATLAB_TEMP_DIR = '/scratch/'
-
-
-# TODO(andrei): Extract this into dedicated Python MODULE. Document the shit
-# out of it and make it easy to add support for pymatbridge or native Python
-# GP code in the future!
 def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
     X, y, test_doc_ids, X_test = classifier_aggregation_preprocess(
         topic_graph, all_sampled_votes, docs_to_eval, **kw)
+
+    # TODO(andrei): Warn if using default driver.
+    matlab_driver = kw.get('gpml_driver', MatlabDiskDriver())
 
     # Massage the labels into what Matlab is expecting.
     y = [-1 if lbl == 0 else +1 for lbl in y]
     y = np.array(y, dtype=np.float64).reshape(-1, 1)
 
-    with tempfile.TemporaryDirectory(prefix='matlab_', dir=MATLAB_TEMP_DIR) \
-            as temp_dir:
-        temp_dir_pid = temp_dir + str(os.getpid())
-        matlab_folder_name = os.path.join(temp_dir_pid, 'matlab')
+    gp_script_name = 'matlab/run_in_dir.sh'
+    result = matlab_driver.run_matlab(gp_script_name, {
+        'X': X,
+        'X_test': X_test,
+        'y': y
+    })
 
-        mlab_start_ms = int(time.time() * 1000)
-        # folder_id = random.randint(0, sys.maxsize)
-        # matlab_folder_name = MATLAB_TEMP_DIR + 'matlab_' + str(folder_id)
-        try:
-            shutil.copytree('matlab', matlab_folder_name)
-        except shutil.Error as e:
-            print("Fatal error setting up the temporary MATLAB folder.")
-            raise
-
-        io.savemat(matlab_folder_name + '/train.mat', mdict={'x': X, 'y': y})
-        io.savemat(matlab_folder_name + '/test.mat', mdict={'t': X_test})
-
-        # print("Test data shape: {0}".format(X_test.shape))
-
-        args = ['matlab/run_in_dir.sh', matlab_folder_name]
-
-        from subprocess import Popen, PIPE
-
-        try:
-            process = Popen(args, stdout=PIPE, stderr=PIPE)
-            output, err = process.communicate()
-        except OSError as err:
-            print("Unexpected OSError running MATLAB script. argv was: [{0}]."
-                  .format(args))
-            raise
-
-        if process.returncode != 0:
-            print("Error running MATLAB.")
-            print("stdout was:")
-            print(output)
-            print("stderr was:")
-            print(err)
-            raise OSError("MATLAB code couldn't run (nonzero script exit code).")
-
-        # print('Finished %s' % str(datetime.datetime.now()))
-        # print('Getting the matrix')
-
-        # Loads a `prob` vector
-        prob_location = matlab_folder_name + '/prob.mat'
-
-        try:
-            mat_objects = io.loadmat(prob_location)
-            prob = mat_objects['prob']
-        except FileNotFoundError as err:
-            # This seems to happen almost at random, despite creating dynamic
-            # uniquely-named folders.
-            raise RuntimeError("Critical error running Matlab. No output"
-                               " produced. Perhaps there was a race condition?"
-                               " Matlab stdout:\n{0}\nMatlab stderr:\n{1}\n"
-                               " Matlab exit code: {2}\nError:{3}"
-                               .format(output, err, process.returncode, err))
-
-        # Double sanity check.
-        if err is not None and len(err) > 0:
-            logging.warning("MATLAB had error output:\n{0}\nStandard output"
-                            " was:\n{1}".format(err, output))
-            # raise RuntimeError("MATLAB had error output:\n{0}\nStandard output"
-            #                    " was: {1}".format(err, output))
-
-        result = prob[:, 0]
-
-        doc_relevance = {}
-        for idx, doc_id in enumerate(test_doc_ids):
-            boolean_label = (result[idx] >= 0.5)
-            doc_relevance[doc_id] = boolean_label
-
-        mlab_end_ms = int(time.time() * 1000)
-        mlab_time_ms = mlab_end_ms - mlab_start_ms
-        print("Total MATLAB time: {0}ms".format(mlab_time_ms))
-        # TODO(andrei): Keep track of total time necessary for these operations,
-        # even when multiprocessing.
-        # total_mlab_time_ms += mlab_time_ms
+    doc_relevance = {}
+    for idx, doc_id in enumerate(test_doc_ids):
+        boolean_label = (result[idx] >= 0.5)
+        doc_relevance[doc_id] = boolean_label
 
     return doc_relevance
 
 
 def aggregate_gp(topic_graph, all_sampled_votes, **kw):
     """Performs Gaussian Process aggregation in Python.
+
+    TODO(andrei): Delete this is differentiating only using drivers.
 
     Practically speaking, whenever this gets called, it treats all existing
     sampled votes as training data, and tries to predict the relevance of
