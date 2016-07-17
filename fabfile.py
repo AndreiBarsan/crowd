@@ -67,7 +67,7 @@ def gce(sub='run', label='gce'):
         raise ValueError("Unknown GCE action: {0}".format(sub))
 
 
-def _run_euler(run_label, topic_limit):
+def _run_euler(run_label, topic_limit, aggregation_iterations=75):
     print("Will evaluate system on Euler.")
     print("Euler job label: {0}".format(run_label))
     print("Working in your scratch folder, files unused for 15 days are deleted"
@@ -87,14 +87,14 @@ def _run_euler(run_label, topic_limit):
         # 30 iterations, the toolkit will only scale up to that many CPUs.
         # This wastes 18 of the 48 available Euler CPUs.
         command = ('source euler_voodoo.sh &&'
-                   ' bsub -n 48 -W 24:00'
+                   ' bsub -n 48 -W 72:00'
                    # Request 10Gb scratch space per processor.
                    ' -R "rusage[scratch=10000]"'
                    # These flags tell 'bsub' to send an email to the
                    # submitter when the job starts, and when it finishes.
                    ' -B -N'
                    ' "$HOME"/.venv/bin/python3 ' +
-                   _run_experiment(run_label, topic_limit))
+                   _run_experiment(run_label, topic_limit, aggregation_iterations))
         run(command, shell_escape=False, shell=False)
 
 
@@ -110,7 +110,7 @@ def _run_commodity(run_label: str, topic_limit=-1) -> None:
 
 def _run_experiment(run_label: str,
                     topic_limit: int,
-                    aggregation_iterations=88,
+                    aggregation_iterations=36,
                     git_hash=get_git_revision_hash()) -> str:
     """This is command for starting the accuracy evaluation pipeline.
 
