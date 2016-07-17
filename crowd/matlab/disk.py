@@ -18,8 +18,10 @@ if on_euler():
     MATLAB_TEMP_DIR = '/scratch/'
 else:
     MATLAB_TEMP_DIR = '/tmp/scratch/'
+    os.mkdir(MATLAB_TEMP_DIR)
 
 
+# TODO(andrei): Move to own file.
 class MatlabDriver(metaclass=ABCMeta):
     @abstractmethod
     def run_matlab(self, script, in_map) -> dict():
