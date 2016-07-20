@@ -1,9 +1,5 @@
 from abc import ABCMeta, abstractmethod
 
-from crowd.matlab.bridge import MatlabBridgeDriver
-from crowd.matlab.disk import MatlabDiskDriver
-
-
 # TODO(andrei): Improve docs in this file.
 class MatlabDriver(metaclass=ABCMeta):
 
@@ -40,12 +36,3 @@ class MatlabDriverFactory(metaclass=ABCMeta):
     def build(self, **kw):
         pass
 
-
-class MatlabDiskDriverFactory(MatlabDriverFactory):
-    def build(self, **kw):
-        return MatlabDiskDriver()
-
-
-class MatlabBridgeDriverFactory(MatlabDriverFactory):
-    def build(self, **kw):
-        return MatlabBridgeDriver()

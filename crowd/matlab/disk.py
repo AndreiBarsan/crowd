@@ -9,7 +9,7 @@ from subprocess import Popen, PIPE
 
 from scipy import io
 
-from crowd.matlab.matlabdriver import MatlabDriver
+from crowd.matlab.matlabdriver import MatlabDriver, MatlabDriverFactory
 from crowd.util import on_euler
 
 # TODO(andrei): Perhaps pass this to function instead of using globals.
@@ -28,6 +28,11 @@ class MatlabDiskDriver(MatlabDriver):
         super().__init__()
         return matlab_via_disk(in_map['X'], in_map['X_test'], in_map['y'],
                                gp_script_name=script)
+
+
+class MatlabDiskDriverFactory(MatlabDriverFactory):
+    def build(self, **kw):
+        return MatlabDiskDriver()
 
 
 # TODO(andrei): Refactor this so that the MATLAB interop itself is more generic.

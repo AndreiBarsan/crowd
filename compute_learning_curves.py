@@ -18,7 +18,7 @@ from crowd.data import *
 from crowd.experiment_config import ExperimentConfig
 from crowd.graph import *
 from crowd.graph_sampling import lgss_graph_factory, sample_edges_lt
-from crowd.matlab.bridge import MatlabBridgeDriver
+from crowd.matlab.bridge import MatlabBridgeDriver, MatlabBridgeDriverFactory
 from crowd.topic import load_topic_metadata
 
 random.seed(0x7788)
@@ -73,7 +73,7 @@ experimental_gpml_config = ExperimentConfig(
     aggregate_gpml,
     "LV-GP",
     # {MATLAB_DRIVER_KEY: MatlabDiskDriver()},
-    {MATLAB_DRIVER_KEY: MatlabBridgeDriver()},
+    {MATLAB_DRIVER_FACTORY_KEY: MatlabBridgeDriverFactory()},
     nx_graph=True,
     # Use default vanilla random sampler.
     graph_opts={'marker': 'o', 'markevery': 15})
@@ -81,13 +81,13 @@ experimental_gpml_config = ExperimentConfig(
 # This is the config for evaluating the core contribution of the paper.
 # Can graph-based document sampling + GP aggregation beat the state of the art
 # from Martin's paper using randomized least-votes sampling + GP aggregation?
-graph_sampling_with_gp = ExperimentConfig(aggregate_gpml,
-                                          "IC5-GP",
-                                          {},
-                                          nx_graph=True,
-                                          document_sampler=lgss_graph_factory(5),
-                                          graph_opts={'marker': 's',
-                                                      'markevery': 15})
+graph_sampling_with_gp = ExperimentConfig(
+    aggregate_gpml,
+    "IC5-GP",
+    {},
+    nx_graph=True,
+    document_sampler=lgss_graph_factory(5),
+    graph_opts={'marker': 's', 'markevery': 15})
 
 # TODO(andrei; research): 0.5 might make this shittier than conventional
 # techniques, as seen in the generic experiment notebook (which had the default

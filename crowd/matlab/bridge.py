@@ -1,7 +1,7 @@
 """Functionality for speedy(er) MATLAB interop using python-matlab-bridge."""
 
 from pymatbridge import Matlab
-from crowd.matlab.matlabdriver import MatlabDriver
+from crowd.matlab.matlabdriver import MatlabDriver, MatlabDriverFactory
 
 
 class MatlabBridgeDriver(MatlabDriver):
@@ -40,3 +40,8 @@ class MatlabBridgeDriver(MatlabDriver):
 
     def _run_matlab_script(self, script, in_map):
         raise ValueError("Just DO IT!")
+
+
+class MatlabBridgeDriverFactory(MatlabDriverFactory):
+    def build(self, **kw):
+        return MatlabBridgeDriver()

@@ -10,13 +10,13 @@ import numpy as np
 import pandas as pd
 from sklearn.externals.joblib import Parallel, delayed
 
-from crowd.config import MATLAB_DRIVER_KEY
+from crowd.config import MATLAB_DRIVER_FACTORY_KEY
 from crowd.data import ExpertLabel, JudgementRecord, \
     get_topic_judgements_by_doc_id
 from crowd.graph import NxDocumentGraph, DocumentGraph
 from crowd.matlab.bridge import MatlabBridgeDriver
 from crowd.matlab.disk import MatlabDiskDriver
-from crowd.matlab.matlabdriver import MatlabDriver
+from crowd.matlab.matlabdriver import MatlabDriver, MatlabDriverFactory
 from crowd.topic import Topic
 
 DEFAULT_BUDGET = 250
@@ -110,24 +110,15 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
     """
 
     # Ensures we start the driver for every worker separately.
-    # TODO(andrei): Replace this mess with a factory. Consider bundling
-    # factories together into larger object which is more convenient to pass
-    # around.
-    if MATLAB_DRIVER_KEY in kw:
-        # TODO(andrei): Is the explicit copy necessary? Or will the 'start'
-        # kick off multiple MATLABs anyway in the different processes?
-        logging.warning("Copied MATLAB driver object to ensure multiprocessing"
-                        " is stable.")
-        if isinstance(kw[MATLAB_DRIVER_KEY], MatlabBridgeDriver):
-            matlab_driver = MatlabBridgeDriver()
-        else:
-            matlab_driver = MatlabDiskDriver()
-
-        logging.info("Starting matlab driver")
-        matlab_driver.start()
-        kw[MATLAB_DRIVER_KEY] = matlab_driver
-
-        logging.warning("Driver: %s", matlab_driver)
+    # TODO(andrei): Consider bundling factories together into larger object
+    # which is more convenient to pass around.
+    if MATLAB_DRIVER_FACTORY_KEY in kw:
+        mdf = kw[MATLAB_DRIVER_FACTORY_KEY]
+        assert isinstance(mdf, MatlabDriverFactory)
+        kw['matlab_driver'] = mdf.build()
+        logging.warning("Built driver for worker: %s", kw['matlab_driver'])
+        kw['matlab_driver'].start()
+        logging.warning("Driver started OK.")
 
     # Ensure we don't try to sample votes where we have NO votes, and no ground
     # truth. However, if for a document we have a ground truth but no votes,

@@ -31,4 +31,4 @@ FULLTEXT_FOLDER = os.path.join(DATA_ROOT, 'url-header-html-txt')
 # Constant dict key used when manipulating the MATLAB driver (i.e. the proxy
 # which allows interoperability wiht MATLAB, as required by e.g. the
 # Gaussian Processes code, which relies on the GPML library).
-MATLAB_DRIVER_KEY = 'matlab_driver'
+MATLAB_DRIVER_FACTORY_KEY = 'matlab_driver'
