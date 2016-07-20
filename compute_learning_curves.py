@@ -18,6 +18,7 @@ from crowd.data import *
 from crowd.experiment_config import ExperimentConfig
 from crowd.graph import *
 from crowd.graph_sampling import lgss_graph_factory, sample_edges_lt
+from crowd.matlab.bridge import MatlabBridgeDriver
 from crowd.topic import load_topic_metadata
 
 random.seed(0x7788)
@@ -68,13 +69,14 @@ experimental_sgd_config = ExperimentConfig(aggregate_lm,
                                            # Use vanilla random sampler
                                           graph_opts={'marker': 'o',
                                                       'markevery': 15})
-experimental_gpml_config = ExperimentConfig(aggregate_gpml,
-                                           "LV-GP",
-                                           {},
-                                           nx_graph=True,
-                                           # Use vanilla random sampler
-                                           graph_opts={'marker': 'o',
-                                                       'markevery': 15})
+experimental_gpml_config = ExperimentConfig(
+    aggregate_gpml,
+    "LV-GP",
+    # {MATLAB_DRIVER_KEY: MatlabDiskDriver()},
+    {MATLAB_DRIVER_KEY: MatlabBridgeDriver()},
+    nx_graph=True,
+    # Use default vanilla random sampler.
+    graph_opts={'marker': 'o', 'markevery': 15})
 
 # This is the config for evaluating the core contribution of the paper.
 # Can graph-based document sampling + GP aggregation beat the state of the art

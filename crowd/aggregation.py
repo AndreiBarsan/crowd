@@ -9,7 +9,7 @@ import numpy as np
 from scipy import sparse
 from sklearn.linear_model import SGDClassifier
 
-
+from crowd.config import MATLAB_DRIVER_KEY
 from crowd.data import JudgementRecord
 from crowd.graph import NxDocumentGraph
 from crowd.matlab.disk import matlab_via_disk, MatlabDiskDriver
@@ -380,8 +380,10 @@ def aggregate_gpml(topic_graph, all_sampled_votes, docs_to_eval, **kw):
     X, y, test_doc_ids, X_test = classifier_aggregation_preprocess(
         topic_graph, all_sampled_votes, docs_to_eval, **kw)
 
-    # TODO(andrei): Warn if using default driver.
-    matlab_driver = kw.get('gpml_driver', MatlabDiskDriver())
+    if MATLAB_DRIVER_KEY not in kw:
+        raise ValueError("Running Gaussian Process aggregation requires passing"
+                         " a MATLAB driver responsible for doing interop.")
+    matlab_driver = kw[MATLAB_DRIVER_KEY]
 
     # Massage the labels into what Matlab is expecting.
     y = [-1 if lbl == 0 else +1 for lbl in y]

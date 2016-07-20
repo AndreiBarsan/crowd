@@ -27,3 +27,8 @@ TEST_LABEL_FILE_TEAMS = os.path.join(DATA_ROOT, 'test-set-Aug-8', 'trec-cs-2011-
 
 TOPIC_DESCRIPTION_FILE = os.path.join(DATA_ROOT, 'topics.mq09.cs2011-test-topics.xml')
 FULLTEXT_FOLDER = os.path.join(DATA_ROOT, 'url-header-html-txt')
+
+# Constant dict key used when manipulating the MATLAB driver (i.e. the proxy
+# which allows interoperability wiht MATLAB, as required by e.g. the
+# Gaussian Processes code, which relies on the GPML library).
+MATLAB_DRIVER_KEY = 'matlab_driver'

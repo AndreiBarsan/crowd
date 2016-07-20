@@ -1,15 +1,15 @@
-"""Does MATLAB interop in a slow and steady fashion over the disk."""
+"""Functionality for synchronous MATLAB interop over the disk."""
 
-from abc import ABCMeta, abstractmethod
 import logging
 import os
 import shutil
 import tempfile
 import time
-
-from scipy import io
 from subprocess import Popen, PIPE
 
+from scipy import io
+
+from crowd.matlab.matlabdriver import MatlabDriver
 from crowd.util import on_euler
 
 # TODO(andrei): Perhaps pass this to function instead of using globals.
@@ -18,28 +18,14 @@ if on_euler():
     MATLAB_TEMP_DIR = '/scratch/'
 else:
     MATLAB_TEMP_DIR = '/tmp/scratch/'
-    os.mkdir(MATLAB_TEMP_DIR)
-
-
-# TODO(andrei): Move to own file.
-class MatlabDriver(metaclass=ABCMeta):
-    @abstractmethod
-    def run_matlab(self, script, in_map) -> dict():
-        """Runs the specified MATLAB script.
-
-        Args:
-            script: The MATLAB script to run.
-            in_map: A map of names to numpy objects to sent to MATLAB.
-
-        Returns:
-            A dictionary of the stuff returned by MATLAB.
-        """
-        pass
+    if not os.path.exists(MATLAB_TEMP_DIR):
+        os.mkdir(MATLAB_TEMP_DIR)
 
 
 class MatlabDiskDriver(MatlabDriver):
-    def run_matlab(self, script, in_map):
-        # TODO(andrei): Make more generic if possible.
+    # TODO(andrei): Make method more generic if possible.
+    def _run_matlab_script(self, script, in_map) -> dict():
+        super().__init__()
         return matlab_via_disk(in_map['X'], in_map['X_test'], in_map['y'],
                                gp_script_name=script)
 

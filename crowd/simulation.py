@@ -1,17 +1,22 @@
 """Utilities for simulating the crowdsourced voting process."""
 
-# pylint: disable=missing-docstring, superfluous-parens
+from abc import ABCMeta, abstractmethod
 import logging
 import random
+import time
 from typing import Mapping, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from sklearn.externals.joblib import Parallel, delayed
 
+from crowd.config import MATLAB_DRIVER_KEY
 from crowd.data import ExpertLabel, JudgementRecord, \
     get_topic_judgements_by_doc_id
 from crowd.graph import NxDocumentGraph, DocumentGraph
+from crowd.matlab.bridge import MatlabBridgeDriver
+from crowd.matlab.disk import MatlabDiskDriver
+from crowd.matlab.matlabdriver import MatlabDriver
 from crowd.topic import Topic
 
 DEFAULT_BUDGET = 250
@@ -22,9 +27,8 @@ DEFAULT_BUDGET = 250
 N_CORES = -4
 
 
-# TODO(andrei): Python 3.3-compatible ABC! Check out estimator base classes
-# in sklearn for cross-version-friendly solution!
-class DocumentSampler(object):
+# TODO(andrei): Move sampling and aggregation to their own MODULES.
+class DocumentSampler(metaclass=ABCMeta):
     """ABC for components which sample a document from the existing pool.
 
     These modules can either just randomly sample, or use some smart criteria
@@ -33,6 +37,7 @@ class DocumentSampler(object):
     def __init__(self):
         pass
 
+    @abstractmethod
     def sample(self, existing_votes, available_topic_judgements):
         """Selects a document based on the existing votes."""
         pass
@@ -104,7 +109,25 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
     Please see the 'evaluate' function for more information.
     """
 
-    # The votes we aggregated so far.
+    # Ensures we start the driver for every worker separately.
+    # TODO(andrei): Replace this mess with a factory. Consider bundling
+    # factories together into larger object which is more convenient to pass
+    # around.
+    if MATLAB_DRIVER_KEY in kw:
+        # TODO(andrei): Is the explicit copy necessary? Or will the 'start'
+        # kick off multiple MATLABs anyway in the different processes?
+        logging.warning("Copied MATLAB driver object to ensure multiprocessing"
+                        " is stable.")
+        if isinstance(kw[MATLAB_DRIVER_KEY], MatlabBridgeDriver):
+            matlab_driver = MatlabBridgeDriver()
+        else:
+            matlab_driver = MatlabDiskDriver()
+
+        logging.info("Starting matlab driver")
+        matlab_driver.start()
+        kw[MATLAB_DRIVER_KEY] = matlab_driver
+
+        logging.warning("Driver: %s", matlab_driver)
 
     # Ensure we don't try to sample votes where we have NO votes, and no ground
     # truth. However, if for a document we have a ground truth but no votes,
@@ -183,13 +206,11 @@ def evaluate(topic_graph,
     """
 
     iterations = kw.get('iterations', 10)
-    # verbose = kw['verbose'] if 'verbose' in kw else False
 
     print("Performing evaluation of topic [{}].".format(topic_graph.topic))
     print("Aggregation function: [{}]".format(vote_aggregation))
     print("Useful ground truth labels available: [{}]".format(len(ground_truth)))
 
-    import time
     start = time.time()
 
     # TODO(andrei): Make this cleaner, and get rid of the factory hack.
