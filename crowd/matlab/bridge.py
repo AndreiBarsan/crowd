@@ -1,6 +1,12 @@
 """Functionality for speedy(er) MATLAB interop using python-matlab-bridge."""
 
+import logging
+import os
+import shutil
+import time
+
 from pymatbridge import Matlab
+
 from crowd.matlab.matlabdriver import MatlabDriver, MatlabDriverFactory
 
 
@@ -38,8 +44,69 @@ class MatlabBridgeDriver(MatlabDriver):
         super().start()
         self.matlab.start()
 
+        # TODO(andrei): More robustness.
+        print(self.matlab.run_code('pwd'))
+        self.matlab.run_code(r'''addpath(genpath('./matlab'))''')
+
+
+        # with tempfile.TemporaryDirectory(prefix='matlab_', dir=MATLAB_TEMP_DIR) \
+        #         as temp_dir:
+        #     temp_dir_pid = temp_dir + str(os.getpid())
+        #
+        #     matlab_folder_name = os.path.join(temp_dir_pid, 'matlab')
+        #
+        #     try:
+        #         shutil.copytree('matlab', matlab_folder_name)
+        #     except shutil.Error as e:
+        #         print("Fatal error setting up the temporary MATLAB folder.")
+        #         raise
+        #
+        #
+        # # TODO(andrei): Copy shit here.
+        # # TODO(andrei): Run init script.
+        # TODO(andrei): Time initialization.
+
     def _run_matlab_script(self, script, in_map):
-        raise ValueError("Just DO IT!")
+        start_ms = int(time.time() * 1000)
+
+        logging.info("Have %d variables to set.", len(in_map))
+        for vn, v in in_map.items():
+            self.matlab.set_variable(vn, v)
+
+        logging.info("Set all variables OK.")
+        # print(self.matlab.run_code('disp(\'sanity\')'))
+        mlab_res = self.matlab.run_code('rungp_fn')
+        print(mlab_res)
+
+        if not mlab_res['success']:
+            raise RuntimeError("Could not run MATLAB. Got error message: {0}"
+                               .format(mlab_res['content']))
+
+        result = self.matlab.get_variable('prob')
+        print(result)
+
+        self.matlab.set_variable('foo', 42)
+        self.matlab.run_code('foo = foo + 3')
+        print(self.matlab.get_variable('foo'))
+        print(self.matlab.get_variable('bar'))
+
+        # self.matlab.run_func('matlab/rungp_fn.m',
+        #                      in_map['X'],
+        #                      in_map['y'],
+        #                      in_map['X_test'])
+
+        # script_cmd = '{0} ; '.format(script)
+        # self.matlab.run_code(script_cmd)
+        end_ms = int(time.time() * 1000)
+        time_ms = end_ms - start_ms
+        logging.info("Ran MATLAB code using pymatbridge in %dms.", time_ms)
+
+        print(result)
+
+        # Dirty trick
+        exit(-1)
+
+        return result[:, 0]
 
 
 class MatlabBridgeDriverFactory(MatlabDriverFactory):

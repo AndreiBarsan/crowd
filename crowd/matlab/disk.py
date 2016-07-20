@@ -36,6 +36,8 @@ class MatlabDiskDriverFactory(MatlabDriverFactory):
 
 
 # TODO(andrei): Refactor this so that the MATLAB interop itself is more generic.
+# TODO(andrei): Add retry mechanic to make this more robust against random
+# failures on Euler.
 def matlab_via_disk(X, X_test, y, gp_script_name):
     """Performs vote aggregation using Gaussian Processes in MATLAB.
 
