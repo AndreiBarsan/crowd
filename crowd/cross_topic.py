@@ -81,6 +81,7 @@ def cross_topic_learning_curve_frame(graphs_by_topic_id, cfg, judgements,
         # This can be used to experiment with the code without committing to
         # go through all topics, which could be very, very time-consuming.
         # We don't want to count the 'loser_topics', though.
+        # TODO(andrei): Fix this shitte. It's counting stuff wrong!
         if topic_limit > 0 and (idx - len(loser_topics) > topic_limit):
             print("Reached limit. Stopping.")
             break

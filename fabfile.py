@@ -67,7 +67,7 @@ def gce(sub='run', label='gce'):
         raise ValueError("Unknown GCE action: {0}".format(sub))
 
 
-def _run_euler(run_label, topic_limit, aggregation_iterations=75):
+def _run_euler(run_label, topic_limit, aggregation_iterations=36):
     print("Will evaluate system on Euler.")
     print("Euler job label: {0}".format(run_label))
     print("Working in your scratch folder, files unused for 15 days are deleted"
@@ -83,11 +83,8 @@ def _run_euler(run_label, topic_limit, aggregation_iterations=75):
     _sync_data_and_code(work_dir)
 
     with cd(work_dir):
-        # TODO(andrei): Consider parallelizing better. If using e.g.
-        # 30 iterations, the toolkit will only scale up to that many CPUs.
-        # This wastes 18 of the 48 available Euler CPUs.
         command = ('source euler_voodoo.sh &&'
-                   ' bsub -n 48 -W 72:00'
+                   ' bsub -n 48 -W 24:00'
                    # Request 10Gb scratch space per processor.
                    ' -R "rusage[scratch=10000]"'
                    # These flags tell 'bsub' to send an email to the
@@ -95,6 +92,7 @@ def _run_euler(run_label, topic_limit, aggregation_iterations=75):
                    ' -B -N'
                    ' "$HOME"/.venv/bin/python3 ' +
                    _run_experiment(run_label, topic_limit, aggregation_iterations))
+        print("Will run: " + command)
         run(command, shell_escape=False, shell=False)
 
 

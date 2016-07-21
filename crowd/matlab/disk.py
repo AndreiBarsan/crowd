@@ -25,7 +25,7 @@ else:
 class MatlabDiskDriver(MatlabDriver):
     # TODO(andrei): Make method more generic if possible.
     def _run_matlab_script(self, script, in_map) -> dict():
-        super().__init__()
+        super()._run_matlab_script(script, in_map)
         return matlab_via_disk(in_map['X'], in_map['X_test'], in_map['y'],
                                gp_script_name=script)
 
@@ -33,6 +33,26 @@ class MatlabDiskDriver(MatlabDriver):
 class MatlabDiskDriverFactory(MatlabDriverFactory):
     def build(self, **kw):
         return MatlabDiskDriver()
+
+
+def matlab_via_disk_retries(X, X_test, y, gp_script_name, retries_left=5):
+    """Ghetto retries for mysterious Euler failures."""
+
+    try:
+        return matlab_via_disk(X, X_test, y, gp_script_name)
+    except Exception as e:
+        if retries_left > 0:
+            # Suppress for now
+            logging.warning("Detected failure while attempting MATLAB"
+                            " computation. Retries left: %d", retries_left)
+            return matlab_via_disk_retries(X,
+                                           X_test,
+                                           y,
+                                           gp_script_name,
+                                           retries_left - 1)
+        else:
+            logging.error("Out of retries. Time to explode, sorry.")
+            raise
 
 
 # TODO(andrei): Refactor this so that the MATLAB interop itself is more generic.

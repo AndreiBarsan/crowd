@@ -19,6 +19,7 @@ from crowd.experiment_config import ExperimentConfig
 from crowd.graph import *
 from crowd.graph_sampling import lgss_graph_factory, sample_edges_lt
 from crowd.matlab.bridge import MatlabBridgeDriver, MatlabBridgeDriverFactory
+from crowd.matlab.disk import MatlabDiskDriverFactory
 from crowd.topic import load_topic_metadata
 
 random.seed(0x7788)
@@ -72,8 +73,8 @@ experimental_sgd_config = ExperimentConfig(aggregate_lm,
 experimental_gpml_config = ExperimentConfig(
     aggregate_gpml,
     "LV-GP",
-    # {MATLAB_DRIVER_KEY: MatlabDiskDriver()},
-    {MATLAB_DRIVER_FACTORY_KEY: MatlabBridgeDriverFactory()},
+    {MATLAB_DRIVER_FACTORY_KEY: MatlabDiskDriverFactory()},
+    # {MATLAB_DRIVER_FACTORY_KEY: MatlabBridgeDriverFactory()},
     nx_graph=True,
     # Use default vanilla random sampler.
     graph_opts={'marker': 'o', 'markevery': 15})

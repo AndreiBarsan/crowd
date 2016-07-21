@@ -67,6 +67,8 @@ class MatlabBridgeDriver(MatlabDriver):
         # TODO(andrei): Time initialization.
 
     def _run_matlab_script(self, script, in_map):
+        super()._run_matlab_script(script, in_map)
+
         start_ms = int(time.time() * 1000)
 
         logging.info("Have %d variables to set.", len(in_map))
