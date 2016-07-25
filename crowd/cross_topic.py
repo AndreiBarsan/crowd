@@ -59,6 +59,7 @@ def compute_cross_topic_learning(experiments: Sequence[ExperimentConfig],
 def cross_topic_learning_curve_frame(graphs_by_topic_id, cfg, judgements,
                                      test_data, **kw):
     curves = []
+    raw_curves = []
     index = None
     topic_limit = kw.get('topic_limit', -1)
     aggregation_function = cfg.vote_aggregator
@@ -73,16 +74,17 @@ def cross_topic_learning_curve_frame(graphs_by_topic_id, cfg, judgements,
 
     print("Processing aggregator: {0}.".format(label))
     topic_count = len(graphs_by_topic_id)
+    skipped = 0
     for idx, (topic_id, topic) in enumerate(graphs_by_topic_id.items()):
         if topic_id in loser_topics:
             logging.warning("Skipping \"loser\" topic %s.", topic_id)
+            skipped += 1
             continue
 
         # This can be used to experiment with the code without committing to
         # go through all topics, which could be very, very time-consuming.
         # We don't want to count the 'loser_topics', though.
-        # TODO(andrei): Fix this shitte. It's counting stuff wrong!
-        if topic_limit > 0 and (idx - len(loser_topics) > topic_limit):
+        if topic_limit > 0 and (idx - skipped > topic_limit):
             print("Reached limit. Stopping.")
             break
 
@@ -92,14 +94,11 @@ def cross_topic_learning_curve_frame(graphs_by_topic_id, cfg, judgements,
 
         topic_judgements = get_topic_judgements_by_doc_id(topic_id, judgements)
         document_count = len(topic_judgements)
-        # if cfg.nx_graph:
-        #     graph = id_topic_nx_graph[topic_id]
-        # else:
-        #     graph = id_topic_graph[topic_id]
+
         graph = graphs_by_topic_id[topic_id]
         # TODO(andrei): Get rid of 'document_count' argument.
         # TODO(andrei): Keep passing 'cfg' to this function instead of many params.
-        curve = learning_curve_frame(
+        curve, raw_curve = learning_curve_frame(
             graph,
             aggregation_function,
             label,
@@ -111,10 +110,13 @@ def cross_topic_learning_curve_frame(graphs_by_topic_id, cfg, judgements,
             document_sampler,
             **kw)
         curves.append(curve[label])
+        raw_curves.append(curve)
         index = curve.index
 
     curves = np.array(curves)
     means = np.mean(curves, axis=0)
+
+    # TODO(andrei): Also return raw_curves for save keeping.
     return pd.DataFrame({label: means}, index=index)
 
 

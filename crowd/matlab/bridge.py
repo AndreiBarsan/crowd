@@ -20,6 +20,11 @@ class MatlabBridgeDriver(MatlabDriver):
         super().__init__()
         self.matlab = Matlab()
 
+        # As of July 2016, there seems to be a bug which wrecks the data
+        # dimensionality when feeding it to MATLAB, causing a matrix dimension
+        # mismatch to happen.
+        raise ValueError("MATLAB interop via pymatbridge doesn't work.")
+
     def start(self):
         """Starts MATLAB so that we may send commands to it.
 
@@ -43,28 +48,7 @@ class MatlabBridgeDriver(MatlabDriver):
         """
         super().start()
         self.matlab.start()
-
-        # TODO(andrei): More robustness.
-        print(self.matlab.run_code('pwd'))
         self.matlab.run_code(r'''addpath(genpath('./matlab'))''')
-
-
-        # with tempfile.TemporaryDirectory(prefix='matlab_', dir=MATLAB_TEMP_DIR) \
-        #         as temp_dir:
-        #     temp_dir_pid = temp_dir + str(os.getpid())
-        #
-        #     matlab_folder_name = os.path.join(temp_dir_pid, 'matlab')
-        #
-        #     try:
-        #         shutil.copytree('matlab', matlab_folder_name)
-        #     except shutil.Error as e:
-        #         print("Fatal error setting up the temporary MATLAB folder.")
-        #         raise
-        #
-        #
-        # # TODO(andrei): Copy shit here.
-        # # TODO(andrei): Run init script.
-        # TODO(andrei): Time initialization.
 
     def _run_matlab_script(self, script, in_map):
         super()._run_matlab_script(script, in_map)
@@ -74,9 +58,8 @@ class MatlabBridgeDriver(MatlabDriver):
         logging.info("Have %d variables to set.", len(in_map))
         for vn, v in in_map.items():
             self.matlab.set_variable(vn, v)
-
         logging.info("Set all variables OK.")
-        # print(self.matlab.run_code('disp(\'sanity\')'))
+
         mlab_res = self.matlab.run_code('rungp_fn')
         print(mlab_res)
 
@@ -86,11 +69,6 @@ class MatlabBridgeDriver(MatlabDriver):
 
         result = self.matlab.get_variable('prob')
         print(result)
-
-        self.matlab.set_variable('foo', 42)
-        self.matlab.run_code('foo = foo + 3')
-        print(self.matlab.get_variable('foo'))
-        print(self.matlab.get_variable('bar'))
 
         # self.matlab.run_func('matlab/rungp_fn.m',
         #                      in_map['X'],
@@ -103,10 +81,8 @@ class MatlabBridgeDriver(MatlabDriver):
         time_ms = end_ms - start_ms
         logging.info("Ran MATLAB code using pymatbridge in %dms.", time_ms)
 
-        print(result)
-
-        # Dirty trick
-        exit(-1)
+        # Dirty trick for testing
+        # exit(-1)
 
         return result[:, 0]
 

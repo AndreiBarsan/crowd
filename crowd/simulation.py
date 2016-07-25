@@ -23,8 +23,8 @@ DEFAULT_BUDGET = 250
 
 # TODO(andrei): De-constantify and pass as argument to program.
 # Use all cores for parallel stuff.
-# N_CORES = -1
-N_CORES = -4
+N_CORES = -1
+# N_CORES = -4
 
 
 # TODO(andrei): Move sampling and aggregation to their own MODULES.
@@ -119,6 +119,10 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
         logging.warning("Built driver for worker: %s", kw['matlab_driver'])
         kw['matlab_driver'].start()
         logging.warning("Driver started OK.")
+    else:
+        kw['matlab_driver'] = MatlabDiskDriver()
+        logging.warning("No MATLAB factory in config. Used default driver: %s",
+                        kw['matlab_driver'])
 
     # Ensure we don't try to sample votes where we have NO votes, and no ground
     # truth. However, if for a document we have a ground truth but no votes,
@@ -132,7 +136,7 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
     # How often we actually want to compute the accuracy, in terms of votes
     # sampled. We likely don't need to recompute everything after every
     # single new vote.
-    # TODO(andrei): Is this still necessary?
+    # TODO(andrei): Is this still working correctly?
     accuracy_every = kw['accuracy_every'] if 'accuracy_every' in kw else 1
 
     # This contains the IDs of the documents which actually have ground truth
@@ -286,6 +290,9 @@ def learning_curve_frame(graph,
     to perform e.g. cross-topic aggregations, when different topics have
     different document counts (which means we need different numbers of votes
     in order to reach the same mean nr. votes per document).
+
+    Returns:
+        A pandas frame of the resampled data, as well as the raw old data.
     """
 
     sample_count = kw.get('sample_count', 100)
@@ -305,11 +312,9 @@ def learning_curve_frame(graph,
         np.linspace(0, len(acc_avg) / document_count, len(acc_avg)),
         # Values to sample
         acc_avg)
-    #     classic = frame
-    frame = pd.DataFrame({label: acc_avg_resampled}, index=new_index)
 
-    #     return frame, classic
-    return frame
+    frame = pd.DataFrame({label: acc_avg_resampled}, index=new_index)
+    return frame, acc_avg
 
 # This code showcases the (very small) discrepancy between the original dataset
 # and the resampled one.

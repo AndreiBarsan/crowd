@@ -63,18 +63,11 @@ experimental_LT_config = ExperimentConfig(aggregate_mev_nx,
                                               5, edge_sampler=sample_edges_lt),
                                           graph_opts={'marker': 'x',
                                                       'markevery': 15})
-experimental_sgd_config = ExperimentConfig(aggregate_lm,
-                                          "LM-SGD",
-                                          {},
-                                          nx_graph=True,
-                                           # Use vanilla random sampler
-                                          graph_opts={'marker': 'o',
-                                                      'markevery': 15})
 experimental_gpml_config = ExperimentConfig(
     aggregate_gpml,
     "LV-GP",
-    {MATLAB_DRIVER_FACTORY_KEY: MatlabDiskDriverFactory()},
     # {MATLAB_DRIVER_FACTORY_KEY: MatlabBridgeDriverFactory()},
+    {},
     nx_graph=True,
     # Use default vanilla random sampler.
     graph_opts={'marker': 'o', 'markevery': 15})
@@ -170,6 +163,10 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
     return experiment_data
 
 
+# TODO(andrei): Your architecture is wrong. Since the data collection
+# (experimentation) is orders of magnitudes slower than analysis, the two parts
+# should be separate: generate raw numbers in your experiment, dump them in
+# plain text and analyze separately.
 @click.command()
 @click.option('--label', default="", help="A short description of the"
                                           " experiment.")
@@ -192,18 +189,15 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
 def learning_curves(label, aggregation_iterations, result_pickle_root, git,
                     topic_limit):
     # TODO(andrei): Use label and pass git revision explicitly!
+    # TODO(andrei): Design proper way to manage random seeds.
     cross_topic_experiments = [
-        # graph_sampling_with_gp,
-        # experimental_sgd_config,
-        # experimental_IC_config,
-        # experimental_LT_config,
-        experimental_gpml_config,
+        graph_sampling_with_gp,
         mv_config,
         mv_nn_config,
         # mv_nn_075_config,
         mev_1_config,
-        mev_2_config,
-        mev_3_config
+        # mev_2_config,
+        # mev_3_config
     ]
 
     if not os.path.exists(result_pickle_root):
@@ -213,6 +207,7 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git,
                  len(cross_topic_experiments))
 
     logging.info("Loading experiment data...")
+
     # TODO(andrei): Figure out why enabling caching sometimes causes strange
     # issues with the graph. Are we still trying to read some original data
     # files after loading the pickle and screwing up because of IDs and ordering
@@ -248,10 +243,25 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git,
     os.mkdir(experiment_folder_path)
 
     result_path = os.path.join(experiment_folder_path, 'result-data.pkl')
+    result_info_path = os.path.join(experiment_folder_path, 'result-info.pkl')
+
+    # Write the aggregated results.
+    # TODO(andrei): perhaps just write everything out in one pickle, so it's
+    # clearer what the data <-> config correspondence is.
     with open(result_path, 'wb') as result_file:
         dill.dump(all_frames, result_file)
-        # TODO(andrei): Also write metainformation, such as full details of
-        # all used experiment configurations.
+
+    # Write the experiment metadata.
+    with open(result_info_path, 'wb') as result_info_file:
+        info = {
+            'configs': cross_topic_experiments,
+            'topic_limit': topic_limit,
+            'up_to_votes_per_doc': up_to_votes_per_doc,
+            'experiment_data': experiment_data,
+            'aggregation_iterations': aggregation_iterations,
+            'sim_threshold': SIM_THRESHOLD
+        }
+        dill.dump(info, result_info_file)
 
     plot_dir = os.path.join(experiment_folder_path, 'plots')
     os.mkdir(plot_dir)

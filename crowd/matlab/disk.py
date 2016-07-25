@@ -24,6 +24,10 @@ else:
 
 class MatlabDiskDriver(MatlabDriver):
     # TODO(andrei): Make method more generic if possible.
+    def __init__(self):
+        super().__init__()
+        super().start()
+
     def _run_matlab_script(self, script, in_map) -> dict():
         super()._run_matlab_script(script, in_map)
         return matlab_via_disk(in_map['X'], in_map['X_test'], in_map['y'],
@@ -36,15 +40,14 @@ class MatlabDiskDriverFactory(MatlabDriverFactory):
 
 
 def matlab_via_disk_retries(X, X_test, y, gp_script_name, retries_left=5):
-    """Ghetto retries for mysterious Euler failures."""
-
+    """Simple retry mechanism for mysterious Euler failures."""
     try:
         return matlab_via_disk(X, X_test, y, gp_script_name)
-    except Exception as e:
+    except Exception as exception:
         if retries_left > 0:
-            # Suppress for now
             logging.warning("Detected failure while attempting MATLAB"
                             " computation. Retries left: %d", retries_left)
+            logging.warning("Exception was: %s", exception)
             return matlab_via_disk_retries(X,
                                            X_test,
                                            y,
@@ -56,8 +59,6 @@ def matlab_via_disk_retries(X, X_test, y, gp_script_name, retries_left=5):
 
 
 # TODO(andrei): Refactor this so that the MATLAB interop itself is more generic.
-# TODO(andrei): Add retry mechanic to make this more robust against random
-# failures on Euler.
 def matlab_via_disk(X, X_test, y, gp_script_name):
     """Performs vote aggregation using Gaussian Processes in MATLAB.
 
@@ -101,9 +102,6 @@ def matlab_via_disk(X, X_test, y, gp_script_name):
         print(err)
         raise OSError("MATLAB code couldn't run (nonzero script exit code).")
 
-    # print('Finished %s' % str(datetime.datetime.now()))
-    # print('Getting the matrix')
-
     # Loads a `prob` vector
     prob_location = matlab_folder_name + '/prob.mat'
 
@@ -123,13 +121,12 @@ def matlab_via_disk(X, X_test, y, gp_script_name):
     if err is not None and len(err) > 0:
         logging.warning("MATLAB had error output:\n{0}\nStandard output"
                         " was:\n{1}".format(err, output))
-        # raise RuntimeError("MATLAB had error output:\n{0}\nStandard output"
-        #                    " was: {1}".format(err, output))
 
     mlab_end_ms = int(time.time() * 1000)
     mlab_time_ms = mlab_end_ms - mlab_start_ms
     print("Total MATLAB time: {0}ms".format(mlab_time_ms))
-    # TODO(andrei): Keep track of total time necessary for these operations,
+
+    # TODO-LOW(andrei): Keep track of total time necessary for these operations,
     # even when multiprocessing.
 
     result = prob[:, 0]
