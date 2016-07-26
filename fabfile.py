@@ -84,7 +84,7 @@ def _run_euler(run_label, topic_limit, aggregation_iterations=80):
 
     with cd(work_dir):
         command = ('source euler_voodoo.sh &&'
-                   ' bsub -n 48 -W 50:00'
+                   ' bsub -n 48 -W 32:00'
                    # Request 10Gb scratch space per processor to ensure that
                    # the MATLAB interop has enough space to work with.
                    ' -R "rusage[scratch=10000]"'
