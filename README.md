@@ -53,6 +53,10 @@ Most of the interesting stuff currently resides in the Jupyter notebooks in the
 The 'compute_learning_curves.py' tool is slowly growing into the main
 experiment driver. Remote deployment is handled using [Fabric3][1].
 
+Note that all the pickle (`*.pkl`) files produced by this tool are
+created using Dill, since it supports more things than the stock
+`pickle` module, such as direct serialization of lambdas and more.
+
 
 ## Roadmap
 
