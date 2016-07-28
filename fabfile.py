@@ -67,7 +67,7 @@ def gce(sub='run', label='gce'):
         raise ValueError("Unknown GCE action: {0}".format(sub))
 
 
-def _run_euler(run_label, topic_limit, aggregation_iterations=80):
+def _run_euler(run_label, topic_limit, aggregation_iterations=160):
     print("Will evaluate system on Euler.")
     print("Euler job label: {0}".format(run_label))
     print("Working in your scratch folder, files unused for 15 days are deleted"
@@ -84,7 +84,7 @@ def _run_euler(run_label, topic_limit, aggregation_iterations=80):
 
     with cd(work_dir):
         command = ('source euler_voodoo.sh &&'
-                   ' bsub -n 48 -W 32:00'
+                   ' bsub -n 48 -W 65:00'
                    # Request 10Gb scratch space per processor to ensure that
                    # the MATLAB interop has enough space to work with.
                    ' -R "rusage[scratch=10000]"'
@@ -109,7 +109,7 @@ def _run_commodity(run_label: str, topic_limit=-1) -> None:
 
 def _run_experiment(run_label: str,
                     topic_limit: int,
-                    aggregation_iterations=36,
+                    aggregation_iterations: int,
                     git_hash=get_git_revision_hash()) -> str:
     """This is command for starting the accuracy evaluation pipeline.
 

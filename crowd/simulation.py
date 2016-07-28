@@ -11,8 +11,7 @@ import pandas as pd
 from sklearn.externals.joblib import Parallel, delayed
 
 from crowd.config import MATLAB_DRIVER_FACTORY_KEY
-from crowd.data import ExpertLabel, JudgementRecord, \
-    get_topic_judgements_by_doc_id
+from crowd.data import *
 from crowd.graph import NxDocumentGraph, DocumentGraph
 from crowd.matlab.bridge import MatlabBridgeDriver
 from crowd.matlab.disk import MatlabDiskDriver

@@ -191,7 +191,8 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git,
     # TODO(andrei): Use label and pass git revision explicitly!
     # TODO(andrei): Design proper way to manage random seeds.
     cross_topic_experiments = [
-        graph_sampling_with_gp,
+        # graph_sampling_with_gp,
+        experimental_gpml_config,
         mv_config,
         mv_nn_config,
         # mv_nn_075_config,
