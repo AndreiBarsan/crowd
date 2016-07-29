@@ -8,13 +8,13 @@ import click
 import dill
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
+# import seaborn as sns
 
 experiment_root = path.join('experiments', 'euler')
 logging.basicConfig(level=logging.DEBUG)
 
-sns.set_context("paper")
-sns.set_style("whitegrid")
+# sns.set_context("paper")
+# sns.set_style("whitegrid")
 
 
 class Source(object):
@@ -48,7 +48,8 @@ pretty_name_map = {
     'IC5-MEV': 'Independent Cascade Sampling + MEV',
     'IC5-GP': 'Independent Cascade Sampling + GP',
     'LV-GP': 'Random Sampling + GP',
-    'LV-MEV(1)': 'Random Sampling + MEV'
+    'LV-MEV(1)': 'Random Sampling + MEV',
+    'LV-MV': 'Random Sampling + MV'
 }
 
 

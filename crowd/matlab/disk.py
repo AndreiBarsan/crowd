@@ -70,69 +70,68 @@ def matlab_via_disk(X, X_test, y, gp_script_name):
     Interacts with MATLAB using disk files. Forks a new MATLAB every time.
     Very slow.
     """
-    with tempfile.TemporaryDirectory(prefix='matlab_', dir=MATLAB_TEMP_DIR) \
-            as temp_dir:
+    with tempfile.TemporaryDirectory(prefix='matlab_', dir=MATLAB_TEMP_DIR) as temp_dir:
         temp_dir_pid = temp_dir + str(os.getpid())
-    matlab_folder_name = os.path.join(temp_dir_pid, 'matlab')
+        matlab_folder_name = os.path.join(temp_dir_pid, 'matlab')
 
-    mlab_start_ms = int(time.time() * 1000)
-    # folder_id = random.randint(0, sys.maxsize)
-    # matlab_folder_name = MATLAB_TEMP_DIR + 'matlab_' + str(folder_id)
-    try:
-        shutil.copytree('matlab', matlab_folder_name)
-    except shutil.Error as e:
-        print("Fatal error setting up the temporary MATLAB folder.")
-        raise
+        mlab_start_ms = int(time.time() * 1000)
+        # folder_id = random.randint(0, sys.maxsize)
+        # matlab_folder_name = MATLAB_TEMP_DIR + 'matlab_' + str(folder_id)
+        try:
+            shutil.copytree('matlab', matlab_folder_name)
+        except shutil.Error as e:
+            print("Fatal error setting up the temporary MATLAB folder.")
+            raise
 
-    io.savemat(matlab_folder_name + '/train.mat', mdict={'x': X, 'y': y})
-    io.savemat(matlab_folder_name + '/test.mat', mdict={'t': X_test})
+        io.savemat(matlab_folder_name + '/train.mat', mdict={'x': X, 'y': y})
+        io.savemat(matlab_folder_name + '/test.mat', mdict={'t': X_test})
 
-    # print("Test data shape: {0}".format(X_test.shape))
+        # print("Test data shape: {0}".format(X_test.shape))
 
-    args = [gp_script_name, matlab_folder_name]
+        args = [gp_script_name, matlab_folder_name]
 
-    try:
-        process = Popen(args, stdout=PIPE, stderr=PIPE)
-        output, err = process.communicate()
-    except OSError as err:
-        print("Unexpected OSError running MATLAB script. argv was: [{0}]."
-              .format(args))
-        raise
+        try:
+            process = Popen(args, stdout=PIPE, stderr=PIPE)
+            output, err = process.communicate()
+        except OSError as err:
+            print("Unexpected OSError running MATLAB script. argv was: [{0}]."
+                  .format(args))
+            raise
 
-    if process.returncode != 0:
-        print("Error running MATLAB.")
-        print("stdout was:")
-        print(output)
-        print("stderr was:")
-        print(err)
-        raise OSError("MATLAB code couldn't run (nonzero script exit code).")
+        if process.returncode != 0:
+            print("Error running MATLAB.")
+            print("stdout was:")
+            print(output)
+            print("stderr was:")
+            print(err)
+            raise OSError("MATLAB code couldn't run (nonzero script exit code).")
 
-    # Loads a `prob` vector
-    prob_location = matlab_folder_name + '/prob.mat'
+        # Loads a `prob` vector
+        prob_location = matlab_folder_name + '/prob.mat'
 
-    try:
-        mat_objects = io.loadmat(prob_location)
-        prob = mat_objects['prob']
-    except FileNotFoundError as err:
-        # This seems to happen almost at random, despite creating dynamic
-        # uniquely-named folders.
-        raise RuntimeError("Critical error running Matlab. No output"
-                           " produced. Perhaps there was a race condition?"
-                           " Matlab stdout:\n{0}\nMatlab stderr:\n{1}\n"
-                           " Matlab exit code: {2}\nError:{3}"
-                           .format(output, err, process.returncode, err))
+        try:
+            mat_objects = io.loadmat(prob_location)
+            prob = mat_objects['prob']
+        except FileNotFoundError as err:
+            # This seems to happen almost at random, despite creating dynamic
+            # uniquely-named folders.
+            raise RuntimeError("Critical error running Matlab. No output"
+                               " produced. Perhaps there was a race condition?"
+                               " Matlab stdout:\n{0}\nMatlab stderr:\n{1}\n"
+                               " Matlab exit code: {2}\nError:{3}"
+                               .format(output, err, process.returncode, err))
 
-    # Double sanity check.
-    if err is not None and len(err) > 0:
-        logging.warning("MATLAB had error output:\n{0}\nStandard output"
-                        " was:\n{1}".format(err, output))
+        # Double sanity check.
+        if err is not None and len(err) > 0:
+            logging.warning("MATLAB had error output:\n{0}\nStandard output"
+                            " was:\n{1}".format(err, output))
 
-    mlab_end_ms = int(time.time() * 1000)
-    mlab_time_ms = mlab_end_ms - mlab_start_ms
-    print("Total MATLAB time: {0}ms".format(mlab_time_ms))
+        mlab_end_ms = int(time.time() * 1000)
+        mlab_time_ms = mlab_end_ms - mlab_start_ms
+        print("Total MATLAB time: {0}ms".format(mlab_time_ms))
 
-    # TODO-LOW(andrei): Keep track of total time necessary for these operations,
-    # even when multiprocessing.
+        # TODO-LOW(andrei): Keep track of total time necessary for these operations,
+        # even when multiprocessing.
 
-    result = prob[:, 0]
-    return result
+        result = prob[:, 0]
+        return result
