@@ -143,7 +143,8 @@ def pick_next_best(graph, current_seed_set, iteration_count):
     is submodular.
     """
 
-    # TODO(andrei): Consider just deleting this function.
+    # TODO(andrei): Consider just deleting this function, since it's not used
+    # any more, and the lazy greedy one should be preferred.
 
     # TODO(andrei): Parameterize this!
     edge_sampler = sample_edges_ic

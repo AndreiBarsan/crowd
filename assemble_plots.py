@@ -8,11 +8,12 @@ import click
 import dill
 import matplotlib.pyplot as plt
 import numpy as np
-# import seaborn as sns
+from scipy.stats import *
 
 experiment_root = path.join('experiments', 'euler')
 logging.basicConfig(level=logging.DEBUG)
 
+# import seaborn as sns
 # sns.set_context("paper")
 # sns.set_style("whitegrid")
 
@@ -78,6 +79,10 @@ def keys():
 def assemble(stats_every):
     click.echo("Assembling plots from specified configs.")
 
+    # Keeps track of all the read datasets in case they are needed for a further
+    # stage of preprocessing.
+    datasets = {}
+
     for source in sources:
         click.echo("Source [{0}] ({1})".format(source.name, source.file_name))
         with open(source.file_name, 'rb') as dill_file:
@@ -85,6 +90,10 @@ def assemble(stats_every):
 
             for config, data in data_list:
                 if config.name in source.keys:
+                    if config.name in datasets:
+                        click.echo("Warning: experiment identifier found in"
+                                   " multiple source files: {0}.".format(config.name))
+                    datasets[config.name] = (config, data)
                     click.echo("Processing config [{0}]...".format(config.name))
                     # Assume X always represents votes/per doc, from 0 to 1.
                     x = np.linspace(0.0, 1.0, data.shape[0])
