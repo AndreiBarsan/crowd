@@ -399,7 +399,8 @@ def lgss_graph_factory(iteration_count, **kw):
 
 
 def compare_sampling(tid, sim_threshold, discard_empty_nodes=True):
-    # TODO(andrei): Do we still need this?
+    # TODO(andrei): Do we still need this function? It's only called from the
+    # 'Graph Sampling' notebook, which may still be useful.
 
     id_topic_info = load_topic_metadata()
     judgements = read_useful_judgement_labels(JUDGEMENT_FILE)
@@ -418,7 +419,7 @@ def compare_sampling(tid, sim_threshold, discard_empty_nodes=True):
         discard_empty=discard_empty_nodes)
     topic_judgements = get_topic_judgements_by_doc_id(tid, judgements)
     topic_ground_truth = {truth.document_id: truth for truth in test_data
-                          if truth.topic_id == tid}
+                          if truth.topic_id == tid and truth.label >= 0}
 
     print("Judgements: {}".format(len(topic_judgements.keys())))
     print("Ground truths: {}".format(len(topic_ground_truth.keys())))

@@ -116,7 +116,7 @@ def cross_topic_learning_curve_frame(graphs_by_topic_id, cfg, judgements,
     curves = np.array(curves)
     means = np.mean(curves, axis=0)
 
-    # TODO(andrei): Also return raw_curves for save keeping.
+    # TODO(andrei): Also return raw_curves for safe keeping.
     return pd.DataFrame({label: means}, index=index)
 
 
@@ -153,7 +153,7 @@ def plot_cross_topic_learning(result_data_frames, max_votes, iterations,
         get_git_revision_hash(),
         similarity_threshold,
         iterations)
-    # Save both an easy-to-load PNG, and a lossless EPS.
+    # Save both an easy-to-load PNG, and a vector-format EPS.
     plot_fname = '{}.eps'.format(plot_name)
     png_plot_fname = '{}.png'.format(plot_name)
     plot_path = os.path.join(plot_root, plot_fname)

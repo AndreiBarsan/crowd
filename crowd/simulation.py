@@ -101,7 +101,7 @@ def measure_accuracy(evaluated_judgements, ground_truth, topic_judgements):
     return match / (match + fail)
 
 
-def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
+def evaluate_iteration(topic_graph, topic_judgements, topic_ground_truth,
                        document_sampler, vote_aggregation, **kw):
     """ Performs a single iteration of a learning curve simulation.
 
@@ -128,8 +128,8 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
     # then it will always drag our numbers down, but we would still have to
     # keep track of it.
     sampled_votes = {n.document_id: [] for n in topic_graph.nodes
-                     if n.document_id in ground_truth or
-                        n.document_id in topic_judgements}
+                     if n.document_id in topic_ground_truth or
+                     n.document_id in topic_judgements}
 
     budget = kw['budget'] if 'budget' in kw else DEFAULT_BUDGET
     # How often we actually want to compute the accuracy, in terms of votes
@@ -140,7 +140,7 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
 
     # This contains the IDs of the documents which actually have ground truth
     # information associated with them.
-    kw['ground_truth_docs'] = ground_truth.keys()
+    kw['ground_truth_docs'] = topic_ground_truth.keys()
 
     # TODO(andrei) Numpyfy: accuracies = np.zeros(budget // accuracy_every)
     accuracies = []
@@ -156,11 +156,11 @@ def evaluate_iteration(topic_graph, topic_judgements, ground_truth,
             # 3. Perform the aggregation.
             evaluated_judgements = vote_aggregation(topic_graph,
                                                     sampled_votes,
-                                                    ground_truth.keys(),
+                                                    topic_ground_truth.keys(),
                                                     **kw)
 
             # 4. Measure accuracy.
-            accuracy = measure_accuracy(evaluated_judgements, ground_truth,
+            accuracy = measure_accuracy(evaluated_judgements, topic_ground_truth,
                                         topic_judgements)
             accuracies.append(accuracy)
 
@@ -173,11 +173,11 @@ WORKER_POOL = Parallel(n_jobs=N_CORES)
 def evaluate(topic_graph,
              topic_judgements: Mapping[str, Sequence[JudgementRecord]],
              # TODO(andrei): rename to e.g. ground_truth_by_doc_id
-             ground_truth: Mapping[str, ExpertLabel],
+             topic_ground_truth: Mapping[str, ExpertLabel],
              document_sampler,
              vote_aggregation,
              **kw
-) -> Tuple[Sequence[Sequence[float]], float]:
+             ) -> Tuple[Sequence[Sequence[float]], float]:
     """ Evaluates a vote aggregation strategy for the specified topic.
 
     Args:
@@ -185,7 +185,8 @@ def evaluate(topic_graph,
             perform the evaluation.
         topic_judgements: The votes from which we sampled, as a map from
             document ID to a list of 'JudgementRecord's.
-        ground_truth: A map of document IDs to ground truth 'ExpertJudgement's.
+        topic_ground_truth: A map of document IDs to ground truth
+            'ExpertJudgement's.
         document_sampler: TODO(andrei): refactor.
         vote_aggregation: Function used to aggregate a document's votes and
             produce a final judgement.
@@ -203,7 +204,7 @@ def evaluate(topic_graph,
 
     print("Performing evaluation of topic [{}].".format(topic_graph.topic))
     print("Aggregation function: [{}]".format(vote_aggregation))
-    print("Useful ground truth labels available: [{}]".format(len(ground_truth)))
+    print("Useful ground truth labels available: [{}]".format(len(topic_ground_truth)))
 
     start = time.time()
 
@@ -213,7 +214,7 @@ def evaluate(topic_graph,
         # own state, in which case we want each task to have its own copy.
         all_accuracies = WORKER_POOL(
             delayed(evaluate_iteration)(topic_graph, topic_judgements,
-                                        ground_truth,
+                                        topic_ground_truth,
                                         document_sampler(topic_graph),
                                         vote_aggregation, **kw)
             for idx in range(iterations))
@@ -221,7 +222,7 @@ def evaluate(topic_graph,
         # TODO(andrei) Consider using serial processing for less than k iterations.
         all_accuracies = WORKER_POOL(
             delayed(evaluate_iteration)(topic_graph, topic_judgements,
-                                        ground_truth, document_sampler,
+                                        topic_ground_truth, document_sampler,
                                         vote_aggregation, **kw)
             for idx in range(iterations))
 
@@ -248,13 +249,17 @@ def build_learning_curve(
     topic = graph.topic
     topic_judgements = get_topic_judgements_by_doc_id(topic.topic_id,
                                                       judgements)
+    # Build a map from document id to its ground truth, making sure we only
+    # put in entries from the ground truth which are valid, meaning their
+    # label is 0 (non-relevant) or > 0 (relevant). Negative labels mean
+    # "unknown", and we don't want them.
     topic_ground_truth = {truth.document_id: truth for truth in ground_truth
                           if truth.topic_id == topic.topic_id and
                           truth.label >= 0}
 
     # i.e. up to target_votes votes per doc, on average.
     # TODO(andrei) Make this cleaner and more seamless.
-    max_votes = kw['max_votes'] if 'max_votes' in kw else 3
+    max_votes = kw.get('max_votes', 3)
     bud = len(topic_judgements) * max_votes
     print("Budget being used: {0}".format(bud))
     acc, eval_time_s = evaluate(
