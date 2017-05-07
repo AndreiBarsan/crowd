@@ -1,4 +1,15 @@
 # TODO (in addition to official project milestones and in-code TODOs)
+## Project enhancements, Spring/Summer 2017
+ [ ] Re-run simple experiment and check learning curves are sane.
+ [ ] Separate experiment run from plotting/analysis. Remember, you want
+     to be able to re-analyze experiment dumps as many times as you want.
+ [ ] Run experiment with multiple threshold values and see which results
+     are best.
+ [ ] Statistical significance tests to quantify differences between
+     different aggregation techniques.
+
+
+## Old, general stuff
  * Set up automatic PEP 8 formatting and linting, even inside notebooks.
  * Have documentation-specific sweep over all code, ensuring that especially
    non-trivial stuff is explained right.

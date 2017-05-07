@@ -60,32 +60,11 @@ created using Dill, since it supports more things than the stock
 
 ## Roadmap
 
- * Recreate existing vote propagation methods using graph (NN,
-   Merge-Enough-Votes, etc.).
  * Improve existing methods using more advanced techniques, such as adaptive
    weights or combinations of techniques (poor man's boosting).
  * Explore usability of graph structure for active learning tasks.
 
-## Rough timeline
 
-### Apr 5 - Apr 19
- * Improved graph structure visualization.
- * Simple framework for majority voting.
-
-### Apr 19 - May 3
- * Reimplement Martin's sampling strategy for evaluation
- * Filter out docs with no votes and no ground truth (toggleable) in graph
- * Recreate NN and MV experiments using graph structure.
-
-### May 3 - May 17
- * Improve existing techniques using dynamic weights.
- * Find threshold properties (low priority)
- * Aggregated plots for everything
-
-### May 17 - August
- * Information diffusion techniques in graph.
- 
- 
 [0]:https://github.com/martinthenext/ir-crowd-thesis
 [1]:https://pypi.python.org/pypi/Fabric3
 [2]:https://dl.acm.org/citation.cfm?id=2806460
