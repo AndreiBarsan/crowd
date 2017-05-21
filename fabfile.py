@@ -134,9 +134,11 @@ def _sync_data_and_code(work_dir: str) -> None:
     # 'os.path.join' does no tilde expansion, and this is what we want.
     remote_folder = os.path.join(work_dir, data_folder)
 
-    # This syncs the data (needs to be preprocessed in advance).
+    # This syncs the data. The custom flags let us see a global progress bar,
+    # instead of per-file (spammy) progress.
     rsync(local_dir=data_folder, remote_dir=remote_folder,
-          extra_opts='--progress')
+          default_opts='-ptrz',
+          extra_opts='--info=progress2')
 
     # This syncs the entry point script.
     put(local_path='./compute_learning_curves.py',
@@ -147,12 +149,6 @@ def _sync_data_and_code(work_dir: str) -> None:
 
     # This syncs the matlab stuff.
     rsync(local_dir='matlab/', remote_dir=work_dir + '/matlab')
-
-
-# def latest_run_id():
-#     """Returns the ID of the most recent TF run."""
-#     # TODO(andrei): Nicer way of doing this?
-#     return "ls -t ~/deploy/data/runs | cat | head -n1"
 
 
 # def _download_results(prefix):

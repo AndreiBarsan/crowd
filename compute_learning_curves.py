@@ -188,11 +188,12 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
                                                 " no limit.")
 def learning_curves(label, aggregation_iterations, result_pickle_root, git,
                     topic_limit):
-    # TODO(andrei): Use label and pass git revision explicitly!
+    # TODO(andrei): Use label.
+    # TODO(andrei): Use git revision info when dumping results and plotting.
     # TODO(andrei): Design proper way to manage random seeds.
     cross_topic_experiments = [
         # graph_sampling_with_gp,
-        experimental_gpml_config,
+        # experimental_gpml_config,
         mv_config,
         mv_nn_config,
         # mv_nn_075_config,
