@@ -52,7 +52,10 @@ def euler(sub='run', label='euler', topic_limit='-1'):
     elif sub == 'status':
         run('bjobs')
     elif sub == 'fetch':
-        raise ValueError("Not yet implemented.")
+        # The first arg after sub, normally 'label', is now the root folder
+        # to sync.
+        # TODO(andrei): Get rid of the "master" euler command. It's confusing.
+        _download_results(label)
     else:
         raise ValueError("Unknown Euler action: {0}".format(sub))
 
@@ -73,6 +76,7 @@ def _run_euler(run_label, topic_limit, aggregation_iterations=160):
     print("Working in your scratch folder, files unused for 15 days are deleted"
           " automatically!")
     print("Euler (ETHZ) username: {0}".format(fenv['user']))
+
     work_dir = '/cluster/scratch/{0}/crowd'.format(fenv['user'])
     print("Will work in: {0}".format(work_dir))
     print("Topic limit: {0}".format(topic_limit))
@@ -84,10 +88,10 @@ def _run_euler(run_label, topic_limit, aggregation_iterations=160):
 
     with cd(work_dir):
         command = ('source euler_voodoo.sh &&'
-                   ' bsub -n 48 -W 90:00'
+                   ' bsub -n 48 -W 00:30'
                    # Request 10Gb scratch space per processor to ensure that
                    # the MATLAB interop has enough space to work with.
-                   ' -R "rusage[scratch=40000]"'
+                   ' -R "rusage[scratch=10000]"'
                    # These flags tell 'bsub' to send an email to the
                    # submitter when the job starts, and when it finishes.
                    ' -B -N'
@@ -96,14 +100,20 @@ def _run_euler(run_label, topic_limit, aggregation_iterations=160):
         print("Will run: " + command)
         run(command, shell_escape=False, shell=False)
 
+        experiment_dir = os.path.join(work_dir, 'experiments')
+        fetch_command = "fab euler:fetch,{0}".format(experiment_dir)
+        print("After completion, use the following command to sync the "
+              "experiment results to your local machine:\n\t{0}\n".format(
+                fetch_command))
 
-def _run_commodity(run_label: str, topic_limit=-1) -> None:
+
+def _run_commodity(run_label: str, topic_limit=-1, aggregation_iterations=160) -> None:
     """Runs the pipeline on commodity hardware with no LSF job queueing."""
     work_dir = "~/crowd"
     _sync_data_and_code(work_dir)
 
     with cd(work_dir):
-        command = 'python3 ' + _run_experiment(run_label, topic_limit)
+        command = 'python3 ' + _run_experiment(run_label, topic_limit, aggregation_iterations)
         _in_screen(command, 'crowd_screen', shell_escape=False, shell=False)
 
 
@@ -116,9 +126,9 @@ def _run_experiment(run_label: str,
     It is called inside a screen right away when running on AWS, and submitted
     to LFS using 'bsub' on Euler.
     """
-    # This value is set so that it's large enough to achieve reasonable
-    # statistical confidence, while also matching the upper CPU limit on Euler.
     return ('compute_learning_curves.py'
+            # This value is set so that it's large enough to achieve reasonable
+            # statistical confidence, while also matching the upper CPU limit on Euler.
             ' --aggregation_iterations {0}'
             ' --label "{1}"'
             ' --topic_limit {2}'
@@ -151,18 +161,16 @@ def _sync_data_and_code(work_dir: str) -> None:
     rsync(local_dir='matlab/', remote_dir=work_dir + '/matlab')
 
 
-# def _download_results(prefix):
-#     """Downloads all the TF output data from the remote host."""
-#     local('mkdir -p data/runs/{0}'.format(prefix))
-#
-#     # TODO(andrei): Nicer folder structure.
-#     # TODO(andrei): Random tmp folder for maximum Euler compatibility.
-#     run('mkdir -p /tmp/last_tf_run')
-#     run('cp -R ~/deploy/data/runs/$({})/ /tmp/last_tf_run'.format(latest_run_id()),
-#         shell_escape=False, shell=False)
-#     get(remote_path='/tmp/last_tf_run/*',
-#         local_path='data/runs/{0}'.format(prefix))
-#     print("Downloaded the pipeline results.")
+def _download_results(prefix):
+    """Syncs all the output data from the remote host."""
+    local('mkdir -p experiments')
+
+    rsync(local_dir='experiments/',
+          remote_dir='{0}'.format(prefix),
+          default_opts='-ptrz',
+          extra_opts='--info=progress2')
+
+    print("Synced all experiment results.")
 
 
 def _in_screen(cmd: str, screen_name: str, **kw) -> None:

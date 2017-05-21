@@ -19,7 +19,11 @@ from crowd.util import get_git_revision_hash
 
 
 class Reachability(object):
-    def compute_reachability(self, sampled_graph: nx.Graph, seed_set: Sequence[NxDocumentNode]) -> Sequence[NxDocumentNode]:
+    def compute_reachability(
+        self,
+        sampled_graph: nx.Graph,
+        seed_set: Sequence[NxDocumentNode]
+    ) -> Sequence[NxDocumentNode]:
         raise RuntimeError("Ghetto abstract method. Do not use.")
 
 
@@ -30,6 +34,14 @@ class DefaultReachability(Reachability):
         # Compute the reachability given the seed set and the nodes we sampled.
         all_reached = set()
         for seed_node in seed_set:
+            # TODO(andrei): If we care about reachability, why not just use BFS?
+            # TODO(andrei): Time this and see if vanilla BFS is faster!
+            # nx.bfs_successors()
+            # TODO(andrei): The next step would be to implement BFS in C++ or
+            # at least Cython, since networkx doesn't do that. The idea is we
+            # only need nodes and edges, and we don't care about content,
+            # weights, or anything like that => could pass this raw data to
+            # lower layers quite easily.
             reached = set(nx.shortest_path(sampled_graph, source=seed_node).keys())
             all_reached |= reached
 
@@ -101,7 +113,7 @@ def sample_edges_lt(graph: nx.Graph, seed_set: Sequence[NxDocumentNode]) -> Sequ
     return all_reached
 
 
-def simulate_spread(graph, seed_set, edge_sample_count: int, sample_edges):
+def simulate_spread(graph, seed_set, iteration_count: int, sample_edges):
     """Simulates information spread in 'graph' using a particular model.
 
     Args:
@@ -119,7 +131,7 @@ def simulate_spread(graph, seed_set, edge_sample_count: int, sample_edges):
     """
     reach_sum = 0.0
 
-    for k in range(edge_sample_count):
+    for k in range(iteration_count):
         result = sample_edges(graph, seed_set)
 
         # TODO(andrei): Using naive lengths means nodes have no weights. One
@@ -130,7 +142,7 @@ def simulate_spread(graph, seed_set, edge_sample_count: int, sample_edges):
         # to nodes where all voters agree.
         reach_sum += len(result)
 
-    expected_reach = reach_sum / edge_sample_count
+    expected_reach = reach_sum / iteration_count
     return expected_reach
 
 

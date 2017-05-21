@@ -1,3 +1,5 @@
+#@IgnoreInspection BashAddShebang
+#
 # Don't run this! Source it into your shell, or, better yet, have your nifty
 # deploy script do that for you. You *are* using a deploy script, right?
 
@@ -9,6 +11,9 @@ export ATLAS=/cluster/apps/openblas/0.2.13_par/x86_64/gcc_4.9.2/lib/libopenblas.
 export C_INCLUDE_PATH="$C_INCLUDE_PATH:/cluster/apps/python/3.3.3/x86_64/include/python3.3m/"
 export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH:/cluster/apps/python/3.3.3/x86_64/include/python3.3m/"
 
+# This needs to be set up in advance on Euler. Please see the following document
+# for more information:
+# https://docs.google.com/document/d/1R4mD7NlirDMIGzDL9Es_cbFXu4WSqKOm41BqoiQuSNM/edit
 source ~/.venv/bin/activate
 
 module load zlib

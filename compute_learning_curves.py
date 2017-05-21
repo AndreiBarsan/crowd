@@ -164,9 +164,9 @@ def load_experiment_data(use_cache=True) -> ExperimentData:
 
 
 # TODO(andrei): Your architecture is wrong. Since the data collection
-# (experimentation) is orders of magnitudes slower than analysis, the two parts
-# should be separate: generate raw numbers in your experiment, dump them in
-# plain text and analyze separately.
+# (experimentation) is orders of magnitudes slower than the analysis, the two
+# parts should be separate: generate raw numbers in your experiment, dump them
+# in plain text and analyze them separately.
 @click.command()
 @click.option('--label', default="", help="A short description of the"
                                           " experiment.")
@@ -201,6 +201,8 @@ def learning_curves(label, aggregation_iterations, result_pickle_root, git,
         # mev_2_config,
         # mev_3_config
     ]
+
+    # TODO(andrei): Dump information on what experiments will be run.
 
     if not os.path.exists(result_pickle_root):
         os.mkdir(result_pickle_root)

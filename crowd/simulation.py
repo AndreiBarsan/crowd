@@ -135,7 +135,7 @@ def evaluate_iteration(topic_graph, topic_judgements, topic_ground_truth,
     # How often we actually want to compute the accuracy, in terms of votes
     # sampled. We likely don't need to recompute everything after every
     # single new vote.
-    # TODO(andrei): Is this still working correctly?
+    # TODO(andrei): Is this still working correctly and is it still necessary?
     accuracy_every = kw['accuracy_every'] if 'accuracy_every' in kw else 1
 
     # This contains the IDs of the documents which actually have ground truth
@@ -178,7 +178,7 @@ def evaluate(topic_graph,
              vote_aggregation,
              **kw
              ) -> Tuple[Sequence[Sequence[float]], float]:
-    """ Evaluates a vote aggregation strategy for the specified topic.
+    """Evaluates a vote aggregation strategy for the specified topic.
 
     Args:
         topic_graph: The document graph of the topic on which we want to
@@ -187,7 +187,10 @@ def evaluate(topic_graph,
             document ID to a list of 'JudgementRecord's.
         topic_ground_truth: A map of document IDs to ground truth
             'ExpertJudgement's.
-        document_sampler: TODO(andrei): refactor.
+        document_sampler: Sampler or, if callable, a sampler factory,
+            in case samplers have to have state (we need to perform document
+            sampling in parallel, so we need multiple samplers if they are
+            stateful). TODO(andrei): refactor this to avoid the duck typing.
         vote_aggregation: Function used to aggregate a document's votes and
             produce a final judgement.
 
@@ -217,14 +220,15 @@ def evaluate(topic_graph,
                                         topic_ground_truth,
                                         document_sampler(topic_graph),
                                         vote_aggregation, **kw)
-            for idx in range(iterations))
+            for _ in range(iterations))
     else:
-        # TODO(andrei) Consider using serial processing for less than k iterations.
+        # TODO(andrei): Consider using serial processing for less than k
+        # iterations.
         all_accuracies = WORKER_POOL(
             delayed(evaluate_iteration)(topic_graph, topic_judgements,
                                         topic_ground_truth, document_sampler,
                                         vote_aggregation, **kw)
-            for idx in range(iterations))
+            for _ in range(iterations))
 
     end = time.time()
     duration = end - start
@@ -270,6 +274,10 @@ def build_learning_curve(
         aggregation_function,
         budget=bud,
         **kw)
+
+    # TODO(andrei): [Separation] This seems like a good point to dump all the
+    # raw data for subsequent analysis, instead of doing the means and
+    # discarding the raw 'acc'.
 
     # Note: this result is still indexed by vote. 'learning_curve_frame' can be
     # used to resample stuff so that the indexing happens on a mean-votes-per-
